@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <!-- 禁止用户手势放大缩小 -->
+        <meta
+            name="viewport"
+            content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no"
+        />
+
+        <title>中国临床试验注册中心 - 世界卫生组织国际临床试验注册平台一级注册机构</title>
+        <link rel="shortcut icon" type="image/x-icon" href="./images/fav.ico" />
+        <link rel="stylesheet" href="./css/index.css" />
+        <link rel="stylesheet" href="./css/common.css" />
+
+        <link rel="stylesheet" href="./icont/iconfont.css" />
+        <link rel="stylesheet" href="./css/myPagination.css" />
+    <script src="//g.alicdn.com/frontend-lib/frontend-lib/2.3.74/antidom.js"></script><script src="//o.alicdn.com/frontend-lib/common-lib/jquery.min.js"></script></head>
+
+    <body>
+        <!-- pc -->
+        <div class="pc-wrap">
+            <div class="pc-box">
+                <!-- pc头部 -->
+                <div class="pc-head">
+                    <div class="head1">
+                        <span class="nowtime"></span>
+                    </div>
+                    <div class="nav">
+                        <div class="nav-left">
+                            <ul>
+                                <li><a href="./index.html">网站首页</a>|</li>
+                                <li><a href="./about.html">ChiCTR简介</a>|</li>
+                                <li><a href="./searchproj.html">检索入口</a>|</li>
+                                <li><a href="./file.html">重要文件</a>|</li>
+                                <li><a href="./guide.html">注册指南</a>|</li>
+                                <li><a href="./question.html">常见问题</a></li>
+                            </ul>
+                        </div>
+                        <div class="nav-right">
+                            <!-- 必须排成一排 间距才等于原网页 -->
+                            <a class="on" href="./index.html">简体中文</a>|<a href="./indexEN.html">English</a>
+                        </div>
+                    </div>
+                </div>
+                <!-- nav -->
+                <div class="pc-nav">
+                    <a class="pnav-item" href="./searchproj.html">
+                        <img src="./images/icon/img.png" alt="" />
+                        <span>检索试验</span>
+                    </a>
+                    <a class="pnav-item" href="./countryproj.html">
+                        <img src="./images/icon/img_1.png" alt="" />
+                        <span>按国家、省（市）统计</span>
+                    </a>
+                    <a class="pnav-item" href="./ailmentcodeproj.html">
+                        <img src="./images/icon/img_2.png" alt="" />
+                        <span>按疾病代码统计</span>
+                    </a>
+                    <a class="pnav-item" href="./sponsorproj.html">
+                        <img src="./images/icon/img_3.png" alt="" />
+                        <span>按试验实施单位统计</span>
+                    </a>
+                    <a class="pnav-item" href="./secsponsorproj.html">
+                        <img src="./images/icon/img_4.png" alt="" />
+                        <span>按试验主办单位统计</span>
+                    </a>
+                    <a class="pnav-item" href="./sourceofspendsproj.html">
+                        <img src="./images/icon/img_5.png" alt="" />
+                        <span>按经费或物资来源统计</span>
+                    </a>
+                    <a class="pnav-item" href="./recruitmentstatusproj.html">
+                        <img src="./images/icon/img_6.png" alt="" />
+                        <span>按征募研究对象情况统计</span>
+                    </a>
+                    <a class="pnav-item" href="./regstatusproj.html">
+                        <img src="./images/icon/img_7.png" alt="" />
+                        <span>按注册状态统计</span>
+                    </a>
+                    <a class="pnav-item" href="./measureproj.html">
+                        <img src="./images/icon/img_8.png" alt="" />
+                        <span>按干预措施统计</span>
+                    </a>
+                    <a class="pnav-item" href="./ethicalcommitteeproj.html">
+                        <img src="./images/icon/img_9.png" alt="" />
+                        <span>按伦理委员会统计</span>
+                    </a>
+                    <a class="pnav-item" href="./studytypeproj.html">
+                        <img src="./images/icon/img_10.png" alt="" />
+                        <span>按研究类型统计</span>
+                    </a>
+                    <div class="divclear"></div>
+                </div>
+                <!-- box -->
+                <div class="retrieve-box p10">
+                    <div class="retr-scren">
+                        <div class="scren-tit f-sb">
+                            <div class="tit-left">检索试验</div>
+                            <div class="tit-right">
+                                <div id="handle-search" class="button active">搜索</div>
+                                <div id="handle-rest" class="button">重置</div>
+                                <a class="getmore">更多筛选</a>
+                            </div>
+                        </div>
+                        <div class="scre-box">
+                            <div class="scre-item screone">
+                                <div class="it-text">注册题目</div>
+                                <div class="it-input">
+                                    <input type="text" id="topic" />
+                                </div>
+                            </div>
+                            <div class="scre-item scretwo">
+                                <div class="it-text">正式科学名</div>
+                                <div class="it-input">
+                                    <input type="text" id="sciName" />
+                                </div>
+                            </div>
+                            <div class="scre-item screthree">
+                                <div class="it-text">研究课题代号(代码)</div>
+                                <div class="it-input">
+                                    <input type="text" id="SubCode" />
+                                </div>
+                            </div>
+                            <div class="scre-item screone">
+                                <div class="it-text">注册状态</div>
+                                <div class="it-input">
+                                    <select id="state" class="form-select">
+                                        <option value="">不限</option>
+                                        <option value="1008001">预注册</option>
+                                        <option value="1008002">补注册</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="scre-item scretwo">
+                                <div class="it-text">注册号</div>
+                                <div class="it-input">
+                                    <input type="text" id="regis" />
+                                </div>
+                            </div>
+                            <div class="scre-item screthree">
+                                <div class="it-text">在其它机构的注册号</div>
+                                <div class="it-input">
+                                    <input type="text" id="otherReg" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screone">
+                                <div class="it-text">申请注册联系人</div>
+                                <div class="it-input">
+                                    <input type="text" id="perReg" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid scretwo">
+                                <div class="it-text">研究负责人</div>
+                                <div class="it-input">
+                                    <input type="text" id="Princi" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screthree">
+                                <div class="it-text">年份</div>
+                                <div class="it-input">
+                                    <select id="years" class="form-select">
+                                        <option value="">不限</option>
+                                        <option value="2025">2025</option>
+                                        <option value="2024">2024</option>
+                                        <option value="2023">2023</option>
+                                        <option value="2022">2022</option>
+                                        <option value="2021">2021</option>
+                                        <option value="2020">2020</option>
+                                        <option value="2019">2019</option>
+                                        <option value="2018">2018</option>
+                                        <option value="2017">2017</option>
+                                        <option value="2016">2016</option>
+                                        <option value="2015">2015</option>
+                                        <option value="2014">2014</option>
+                                        <option value="2013">2013</option>
+                                        <option value="2012">2012</option>
+                                        <option value="2011">2011</option>
+                                        <option value="2010">2010</option>
+                                        <option value="2009">2009</option>
+                                        <option value="2008">2008</option>
+                                        <option value="2007">2007</option>
+                                        <option value="2006">2006</option>
+                                        <option value="2005">2005</option>
+                                        <option value="2004">2004</option>
+                                        <option value="2003">2003</option>
+                                        <option value="2002">2002</option>
+                                        <option value="2001">2001</option>
+                                        <option value="2000">2000</option>
+                                        <option value="1999">1999</option>
+                                        <option value="1998">1998</option>
+                                        <option value="1997">1997</option>
+                                        <option value="1996">1996</option>
+                                        <option value="1995">1995</option>
+                                        <option value="1994">1994</option>
+                                        <option value="1993">1993</option>
+                                        <option value="1992">1992</option>
+                                        <option value="1991">1991</option>
+                                        <option value="1990">1990</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screone">
+                                <div class="it-text">研究实施负责(组长)单位</div>
+                                <div class="it-input">
+                                    <input type="text" id="grounp" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid scretwo">
+                                <div class="it-text">试验主办单位</div>
+                                <div class="it-input">
+                                    <input type="text" id="sponser" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screthree">
+                                <div class="it-text">经费或物资来源</div>
+                                <div class="it-input">
+                                    <input type="text" id="expend" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screone">
+                                <div class="it-text">研究疾病名称</div>
+                                <div class="it-input">
+                                    <input type="text" id="study" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid scretwo">
+                                <div class="it-text">研究疾病代码</div>
+                                <div class="it-input">
+                                    <input type="text" id="studyCode" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screthree">
+                                <div class="it-text">研究类型</div>
+                                <div class="it-input">
+                                    <select id="studyType" class="form-select">
+                                        <option value="">不限</option>
+                                        <option value="1">干预性研究/Interventional study</option>
+                                        <option value="2">预防性研究/Prevention</option>
+                                        <option value="3">诊断试验/Diagnostic test</option>
+                                        <option value="4">
+                                            病因学/相关因素研究/Cause/Relative factors study
+                                        </option>
+                                        <option value="5">预后研究/Prognosis study</option>
+                                        <option value="6">
+                                            流行病学研究/Epidemilogical research
+                                        </option>
+                                        <option value="7">
+                                            病因学/相关因素研究/Cause/Relative factors study
+                                        </option>
+                                        <option value="8">观察性研究/Observational study</option>
+                                        <option value="55">筛查/Screening</option>
+                                        <option value="56">
+                                            卫生服务研究/Health services reaserch
+                                        </option>
+                                        <option value="61">治疗研究/Treatment study</option>
+                                        <option value="72">
+                                            卫生服务研究/Health Services Research
+                                        </option>
+                                        <option value="73">基础科学研究/Basic Science</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screone">
+                                <div class="it-text">研究所处阶段</div>
+                                <div class="it-input">
+                                    <select id="Stage" class="form-select">
+                                        <option value="">不限</option>
+                                        <option value="9">I期临床试验/1</option>
+                                        <option value="10">II期临床试验/2</option>
+                                        <option value="11">III期临床试验/3</option>
+                                        <option value="12">上市后药物/4</option>
+                                        <option value="14">I期+II期/1-2</option>
+                                        <option value="15">探索性研究/预试验/0</option>
+                                        <option value="16">IV期临床试验/4</option>
+                                        <option value="17">其它/N/A</option>
+                                        <option value="40">
+                                            治疗新技术临床试验/New Treatment Measure Clinical Study
+                                        </option>
+                                        <option value="42">
+                                            诊断试验新技术临床试验/Diagnostic New Technique Clincal
+                                            Study
+                                        </option>
+                                        <option value="48">回顾性研究/Retrospective study</option>
+                                        <option value="70">II-III期临床试验/2-3</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid scretwo">
+                                <div class="it-text">研究设计</div>
+                                <div class="it-input">
+                                    <select id="studyDesign" class="form-select">
+                                        <option value="">不限</option>
+                                        <option value="18">横断面/Cross-sectional</option>
+                                        <option value="19">
+                                            非随机对照试验/Non randomized control
+                                        </option>
+                                        <option value="20">队列研究/Cohort study</option>
+                                        <option value="21">病例对照研究/Case-Control study</option>
+                                        <option value="22">随机平行对照/Parallel</option>
+                                        <option value="23">连续入组/Sequential</option>
+                                        <option value="24">
+                                            诊断试验诊断准确性/Diagnostic test for accuracy
+                                        </option>
+                                        <option value="25">
+                                            诊断性病例对照试验/Diagnostic test: case-control
+                                        </option>
+                                        <option value="26">单臂/Single arm</option>
+                                        <option value="27">随机交叉对照/Cross-over</option>
+                                        <option value="28">
+                                            半随机对照/Quasi-randomized controlled
+                                        </option>
+                                        <option value="36">随机抽样/Randomly Sampling</option>
+                                        <option value="37">单病例随机对照研究/N of 1 Trial</option>
+                                        <option value="44">
+                                            巢式病例-对照研究/Nested case-control study
+                                        </option>
+                                        <option value="53">不同剂量对照/Dose comparison</option>
+                                        <option value="58">
+                                            整群随机抽样/Cluster randomly sampling
+                                        </option>
+                                        <option value="59">
+                                            整群随机分组/Cluster randomization
+                                        </option>
+                                        <option value="60">历史对照研究/Historical control</option>
+                                        <option value="67">病例研究/Case study</option>
+                                        <option value="69">
+                                            偏倚化抛硬币设计/Biased Coin Design
+                                        </option>
+                                        <option value="71">
+                                            析因分组（即根据危险因素或暴露因素分组）/Factorial
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screthree">
+                                <div class="it-text">征募研究对象情况</div>
+                                <div class="it-input">
+                                    <select id="StudyImp" class="form-select">
+                                        <option value="">不限</option>
+                                        <option value="1004001">尚未开始</option>
+                                        <option value="1004002">正在进行</option>
+                                        <option value="1004003">暂停或中断</option>
+                                        <option value="1004004">结束</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screone">
+                                <div class="it-text">研究实施时间(开始)</div>
+                                <div class="it-input">
+                                    <div class="layui-input-inline">
+                                        <input
+                                            type="text"
+                                            id="minTime"
+                                            autocomplete="off"
+                                            class="layui-input"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid scretwo">
+                                <div class="it-text">研究实施时间(结束)</div>
+                                <div class="it-input">
+                                    <div class="layui-input-inline">
+                                        <input
+                                            type="text"
+                                            id="maxTime"
+                                            autocomplete="off"
+                                            class="layui-input"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screthree">
+                                <div class="it-text">性别</div>
+                                <div class="it-input">
+                                    <select id="sex" class="form-select">
+                                        <option value="">不限</option>
+                                        <option value="1006001">男性</option>
+                                        <option value="1006002">女性</option>
+                                        <option value="1006003">男女均可</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screone">
+                                <div class="it-text">签署知情同意书</div>
+                                <div class="it-input">
+                                    <select id="InforCon" class="form-select">
+                                        <option value="">不限</option>
+                                        <option value="1">是/Yes</option>
+                                        <option value="0">否/No</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid scretwo">
+                                <div class="it-text">国家(地区)</div>
+                                <div class="it-input">
+                                    <input type="text" id="country" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screthree">
+                                <div class="it-text">省(直辖市)</div>
+                                <div class="it-input">
+                                    <input type="text" id="omit" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screone">
+                                <div class="it-text">市(区县)</div>
+                                <div class="it-input">
+                                    <input type="text" id="city" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid scretwo">
+                                <div class="it-text">单位(医院)</div>
+                                <div class="it-input">
+                                    <input type="text" id="unit" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screthree">
+                                <div class="it-text">单位级别</div>
+                                <div class="it-input">
+                                    <input type="text" id="UnitLevel" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screone">
+                                <div class="it-text">干预措施</div>
+                                <div class="it-input">
+                                    <input type="text" id="interven" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid scretwo">
+                                <div class="it-text">干预措施代码</div>
+                                <div class="it-input">
+                                    <input type="text" id="intervenCode" />
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screthree">
+                                <div class="it-text">获伦理委员会批准</div>
+                                <div class="it-input">
+                                    <select id="Approved" class="form-select">
+                                        <option value="">不限</option>
+                                        <option value="1">是/Yes</option>
+                                        <option value="0">否/No</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="scre-item has-item hid screone">
+                                <div class="it-text">公开试验结果文件</div>
+                                <div class="it-input">
+                                    <select id="OpenTest" class="form-select">
+                                        <option value="">不限</option>
+                                        <option value="1">是/Yes</option>
+                                        <option value="0">否/No</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="retr-line">
+                        共检索到
+                        <span id="data-total">32</span>
+                        个符合检索条件的试验。
+                    </div>
+                    <table class="table1" cellspacing="1" cellpadding="0" border="0">
+                        <t-head>
+                            <tr>
+                                <th style="width: 100px">历史版本</th>
+                                <th style="width: 150px">注册号</th>
+                                <th style="width: 454px">注册题目</th>
+                                <th style="width: 90px">研究类型</th>
+                                <th style="width: 80px">注册时间</th>
+                            </tr>
+                        </t-head>
+                        <tr>
+                            <td>
+                                <a href="historyversionpub.html?regno=ChiCTR2500111173">
+                                    历史版本
+                                </a>
+                            </td>
+                            <td>ChiCTR2500111173</td>
+                            <td>
+                                <a
+                                    href="showproj.html?proj=274313"
+                                    class="tit1 wto"
+                                    title="一项在已切除或不可切除 KRAS G12C 突变的非小细胞肺癌受试者中评估 olomorasib 联合标准治疗免疫疗法的有效性和安全性的 3 期、多中心、双盲、安慰剂对照研究-SUNRAY-02"
+                                >
+                                    一项在已切除或不可切除 KRAS G12C 突变的非小细胞肺癌受试者中评估 olomorasib 联合标准治疗免疫疗法的有效性和安全性的 3 期、多中心、双盲、安慰剂对照研究-SUNRAY-02
+                                </a>
+                                <p>广东省人民医院（广东省医学科学院）</p>
+                            </td>
+                            <td>干预性研究</td>
+                            <td>2025/10/27</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="historyversionpub.html?regno=ChiCTR2500110467">
+                                    历史版本
+                                </a>
+                            </td>
+                            <td>ChiCTR2500110467</td>
+                            <td>
+                                <a
+                                    href="showproj.html?proj=278703"
+                                    class="tit1 wto"
+                                    title="氟泽雷塞治疗晚期KRAS G12C突变NSCLC疗效和安全性评估，一项多中心、非干预、观察性研究(IBI351-RWS-001)"
+                                >
+                                    氟泽雷塞治疗晚期KRAS G12C突变NSCLC疗效和安全性评估，一项多中心、非干预、观察性研究(IBI351-RWS-001)
+                                </a>
+                                <p>中国医学科学院肿瘤医院</p>
+                            </td>
+                            <td>观察性研究</td>
+                            <td>2025/10/14</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="historyversionpub.html?regno=ChiCTR2500110453">
+                                    历史版本
+                                </a>
+                            </td>
+                            <td>ChiCTR2500110453</td>
+                            <td>
+                                <a
+                                    href="showproj.html?proj=290499"
+                                    class="tit1 wto"
+                                    title="一项评估格索雷塞联合安罗替尼一线治疗 KRAS G12C 突变阳性局部晚期或转移性非鳞非小细胞肺癌的多中心、 前瞻性临床研究"
+                                >
+                                    一项评估格索雷塞联合安罗替尼一线治疗 KRAS G12C 突变阳性局部晚期或转移性非鳞非小细胞肺癌的多中心、 前瞻性临床研究
+                                </a>
+                                <p>上海市胸科医院</p>
+                            </td>
+                            <td>干预性研究</td>
+                            <td>2025/10/14</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="historyversionpub.html?regno=ChiCTR2500110202">
+                                    历史版本
+                                </a>
+                            </td>
+                            <td>ChiCTR2500110202</td>
+                            <td>
+                                <a
+                                    href="showproj.html?proj=287522"
+                                    class="tit1 wto"
+                                    title="西妥昔单抗Β联合普特利单抗和化疗用于 KRAS/NRAS 野生型左半结肠癌及直肠上段癌新辅助治疗的多中心、单臂、开放性临床研究"
+                                >
+                                    西妥昔单抗Β联合普特利单抗和化疗用于 KRAS/NRAS 野生型左半结肠癌及直肠上段癌新辅助治疗的多中心、单臂、开放性临床研究
+                                </a>
+                                <p>福建医科大学附属第一医院</p>
+                            </td>
+                            <td>干预性研究</td>
+                            <td>2025/10/10</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="historyversionpub.html?regno=ChiCTR2500108082">
+                                    历史版本
+                                </a>
+                            </td>
+                            <td>ChiCTR2500108082</td>
+                            <td>
+                                <a
+                                    href="showproj.html?proj=284721"
+                                    class="tit1 wto"
+                                    title="谷氨酰胺联合奥沙利铂、卡培他滨（XELOX）和贝伐珠单抗一线治疗KRAS G12D基因突变型晚期结直肠癌的单臂Ⅱ期探索性研究"
+                                >
+                                    谷氨酰胺联合奥沙利铂、卡培他滨（XELOX）和贝伐珠单抗一线治疗KRAS G12D基因突变型晚期结直肠癌的单臂Ⅱ期探索性研究
+                                </a>
+                                <p>浙江大学医学院附属第二医院</p>
+                            </td>
+                            <td>干预性研究</td>
+                            <td>2025/08/25</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="historyversionpub.html?regno=ChiCTR2500107544">
+                                    历史版本
+                                </a>
+                            </td>
+                            <td>ChiCTR2500107544</td>
+                            <td>
+                                <a
+                                    href="showproj.html?proj=282630"
+                                    class="tit1 wto"
+                                    title="格索雷塞辅助治疗KRAS G12C突变NSCLC的II期研究"
+                                >
+                                    格索雷塞辅助治疗KRAS G12C突变NSCLC的II期研究
+                                </a>
+                                <p>上海市肺科医院</p>
+                            </td>
+                            <td>干预性研究</td>
+                            <td>2025/08/13</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="historyversionpub.html?regno=ChiCTR2500106513">
+                                    历史版本
+                                </a>
+                            </td>
+                            <td>ChiCTR2500106513</td>
+                            <td>
+                                <a
+                                    href="showproj.html?proj=276424"
+                                    class="tit1 wto"
+                                    title="氟泽雷塞在KRAS G12C突变NSCLC适应症应用示范项目 "
+                                >
+                                    氟泽雷塞在KRAS G12C突变NSCLC适应症应用示范项目 
+                                </a>
+                                <p>上海市胸科医院</p>
+                            </td>
+                            <td>观察性研究</td>
+                            <td>2025/07/24</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="historyversionpub.html?regno=ChiCTR2500104588">
+                                    历史版本
+                                </a>
+                            </td>
+                            <td>ChiCTR2500104588</td>
+                            <td>
+                                <a
+                                    href="showproj.html?proj=271896"
+                                    class="tit1 wto"
+                                    title="HBW-012336胶囊在中国携带KRAS G12D突变的局部晚期或转移性实体瘤患者中的安全性、耐受性、初步有效性和药代动力学特征的多中心、开放性Ⅰ/Ⅱ期临床研究"
+                                >
+                                    HBW-012336胶囊在中国携带KRAS G12D突变的局部晚期或转移性实体瘤患者中的安全性、耐受性、初步有效性和药代动力学特征的多中心、开放性Ⅰ/Ⅱ期临床研究
+                                </a>
+                                <p>中山大学肿瘤防治中心</p>
+                            </td>
+                            <td>干预性研究</td>
+                            <td>2025/06/19</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="historyversionpub.html?regno=ChiCTR2500103833">
+                                    历史版本
+                                </a>
+                            </td>
+                            <td>ChiCTR2500103833</td>
+                            <td>
+                                <a
+                                    href="showproj.html?proj=264969"
+                                    class="tit1 wto"
+                                    title="mRNA 治疗性疫苗在 KRAS 突变恶性肿瘤中应用的探索性研究"
+                                >
+                                    mRNA 治疗性疫苗在 KRAS 突变恶性肿瘤中应用的探索性研究
+                                </a>
+                                <p>四川大学华西医院</p>
+                            </td>
+                            <td>干预性研究</td>
+                            <td>2025/06/05</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <a href="historyversionpub.html?regno=ChiCTR2500103114">
+                                    历史版本
+                                </a>
+                            </td>
+                            <td>ChiCTR2500103114</td>
+                            <td>
+                                <a
+                                    href="showproj.html?proj=273375"
+                                    class="tit1 wto"
+                                    title="谷氨酰胺联合白蛋白紫杉醇、吉西他滨治疗携带KRAS G12D突变晚期胰腺癌"
+                                >
+                                    谷氨酰胺联合白蛋白紫杉醇、吉西他滨治疗携带KRAS G12D突变晚期胰腺癌
+                                </a>
+                                <p>浙江大学医学院附属第二医院</p>
+                            </td>
+                            <td>干预性研究</td>
+                            <td>2025/05/26</td>
+                        </tr>
+                    </table>
+                    <div id="pagination" class="pagination"></div>
+                </div>
+
+                <!-- footer -->
+                <div class="pc-footer">
+                    <div class="foot-link">
+                        <div class="footer_links">
+                            <a target="_blank" href="https://trialsearch.who.int/">
+                                <img alt="欢迎访问WHO国际临床试验注册平台" src="./images/img_4.png">
+                            </a>
+                            <a target="_blank" href="http://www2.ccrb.cuhk.edu.hk/web/">
+                                <img alt="Clinical Trials Hong Kong" src="./images/img_5.png">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="foot-nav">
+                        <ul>
+                            <li>
+                                <a href="./index.html">网站首页</a>|
+                            </li>
+                            <li>
+                                <a href="./about.html">ChiCTR简介</a>|
+                            </li>
+                            <li>
+                                <a href="./searchproj.html">检索入口</a>|
+                            </li>
+                            <li>
+                                <a href="./file.html">重要文件</a>|
+                            </li>
+                            <li>
+                                <a href="./guide.html">注册指南</a>|
+                            </li>
+                            <li>
+                                <a href="./question.html">常见问题</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="foot-cont">
+                        <p><b>中国临床试验注册中心 - 世界卫生组织国际临床试验注册平台一级注册机构</b></p>
+                        <p>Copyright(c) (2005 - 2023) Chictr.org.cn.All rights reserved. 中国临床试验注册中心 版权所有</p>
+                        <p><a target="_blank" href="http://beian.miit.gov.cn/">蜀ICP备16010396号-9</a></p>
+                        <p>提示：推荐使用IE8.0以上版本 宽屏显示分辨率下使用系统</p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <script src="./libs/jQuery/jquery-1.11.3.min.js"></script>
+        <script src="./libs/laydate/laydate.js"></script>
+        <script src="./js/retrieve.js"></script>
+        <script src="./js/myPagination.js"></script>
+        <script src="./js/searchproj.js"></script>
+        <script src="./js/common.js"></script>
+    </body>
+</html>
