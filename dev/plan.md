@@ -54,6 +54,7 @@
 
 # 网站路径
 https://www.chictr.org.cn/searchproj.html?title=KRAS&officialname=&subjectid=&regstatus=&regno=&secondaryid=&applier=&studyleader=&createyear=&sponsor=&secsponsor=&sourceofspends=&studyailment=&studyailmentcode=&studytype=&studystage=&studydesign=&recruitmentstatus=&gender=&agreetosign=&measure=&country=&province=&city=&institution=&institutionlevel=&intercode=&ethicalcommitteesanction=&whetherpublic=&minstudyexecutetime=&maxstudyexecutetime=&btngo=btn
+
 # 信息参考
 - curl样本
 curl 'https://www.chictr.org.cn/searchproj.html?title=KRAS&officialname=&subjectid=&regstatus=&regno=&secondaryid=&applier=&studyleader=&createyear=&sponsor=&secsponsor=&sourceofspends=&studyailment=&studyailmentcode=&studytype=&studystage=&studydesign=&recruitmentstatus=&gender=&agreetosign=&measure=&country=&province=&city=&institution=&institutionlevel=&intercode=&ethicalcommitteesanction=&whetherpublic=&minstudyexecutetime=&maxstudyexecutetime=&btngo=btn' \

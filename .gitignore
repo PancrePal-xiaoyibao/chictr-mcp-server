@@ -5,3 +5,6 @@ dist/
 .env
 *.tsbuildinfo
 playwright/.cache/
+
+# ignore dev folder
+

@@ -282,3 +282,4 @@ MIT License
 ## 🙏 致谢
 
 本项目使用中国临床试验注册中心 (ChiCTR) 的公开数据，感谢 ChiCTR 为医学研究做出的贡献。
+特别感谢[小胰宝](www.xiaoyibao.com.cn)和 [小x宝社区](https://info.xiao-x-bao.com.cn)的❤️贡献与付出，用爱心与人工智能为癌症/罕见病患者及其家庭提供支持！

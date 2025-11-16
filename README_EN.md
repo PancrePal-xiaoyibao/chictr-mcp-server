@@ -293,3 +293,5 @@ If you have any issues, please submit a GitHub Issue.
 ## 🙏 Acknowledgements
 
 This project uses public data from the Chinese Clinical Trial Registry (ChiCTR). We thank ChiCTR for their contributions to medical research.
+
+Speical thanks to the contribution & development of [Xiaoyibao-Pancrepal](www.xiaoyibao.com.cn) & [xiao-x-bao community](https://info.xiao-x-bao.com.cn) to support cancer/rare disease patients and their families with ❤️ & AI！
