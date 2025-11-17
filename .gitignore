@@ -8,3 +8,11 @@ playwright/.cache/
 
 # ignore dev folder
 
+# ignore test files
+test-*.js
+test-*.cjs
+test-*.mjs
+final-*.cjs
+validate-*.cjs
+debug-*.mjs
+detail-page.html

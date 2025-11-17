@@ -22,17 +22,18 @@
 # 功能需求
 ## 1. 搜索临床试验 (search_trials)
 **输入参数:**
-- `keyword`: 关键词（必填），如 "KRAS G12C"
-- `months`: 时间范围（可选），默认 6 个月
-- `max_results`: 最大结果数（可选），默认 10
+- `keyword`: 注册题目关键词（可选），如 "KRAS"
+- `registration_number`: 临床试验注册号（可选），如 "ChiCTR2500111173"
+- `year`: 注册年份（可选），默认当前年份
+- `max_results`: 最大结果数（可选），默认 20
 
 **输出字段:**
 - 注册号 (registration_number)
+- 项目ID (project_id) - 从 showproj.html?proj=XXX 中提取
 - 注册题目 (title)
 - 研究类型 (study_type)
 - 注册时间 (registration_date)
 - 研究实施单位 (institution)
-- 招募状态（从详情页获取）
 
 **排序**: 按注册时间从最近到最远
 

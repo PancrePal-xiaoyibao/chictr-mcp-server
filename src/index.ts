@@ -15,26 +15,29 @@ import { getTrialDetail, getDetailCacheStats, clearDetailCache } from "./service
 const TOOLS: Tool[] = [
   {
     name: "search_trials",
-    description: "搜索ChiCTR临床试验。支持关键词搜索和时间范围筛选，返回试验列表。",
+    description: "搜索ChiCTR临床试验。支持按标题关键词、注册号、年份进行搜索，返回试验列表。",
     inputSchema: {
       type: "object",
       properties: {
         keyword: {
           type: "string",
-          description: "搜索关键词，如 'KRAS G12C'、'胰腺癌' 等",
+          description: "注册题目关键词，如 'KRAS G12C'、'胰腺癌' 等（可选）",
         },
-        months: {
+        registration_number: {
+          type: "string",
+          description: "临床试验注册号，如 'ChiCTR2500111173'（可选）",
+        },
+        year: {
           type: "number",
-          description: "时间范围（月），默认6个月。查询过去N个月的试验",
-          default: 6,
+          description: "注册年份，如 2024、2025，默认为当前年份（可选）",
         },
         max_results: {
           type: "number",
-          description: "最大返回结果数，默认10",
-          default: 10,
+          description: "最大返回结果数，默认20",
+          default: 20,
         },
       },
-      required: ["keyword"],
+      required: [],
     },
   },
   {
@@ -73,7 +76,7 @@ const TOOLS: Tool[] = [
 const server = new Server(
   {
     name: "chictr-mcp-server",
-    version: "0.1.0",
+    version: "1.2.1",
   },
   {
     capabilities: {
@@ -103,18 +106,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     switch (name) {
       case "search_trials": {
-        const keyword = (args?.keyword as string) || "";
-        const months = (args?.months as number) || 6;
-        const maxResults = (args?.max_results as number) || 10;
-
-        if (!keyword) {
-          throw new Error("keyword 参数是必需的");
-        }
+        const keyword = (args?.keyword as string) || undefined;
+        const registrationNumber = (args?.registration_number as string) || undefined;
+        const year = (args?.year as number) || undefined;
+        const maxResults = (args?.max_results as number) || 20;
 
         const results = await searchTrials(
           browserManager,
           keyword,
-          months,
+          registrationNumber,
+          year,
           maxResults
         );
 

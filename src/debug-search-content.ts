@@ -1,7 +1,7 @@
 import { BrowserManager } from "./browser.js";
 import { HtmlParser } from "./parsers/html-parser.js";
 
-async function debugSearch() {
+async function debugSearchContent() {
   const browserManager = new BrowserManager();
   try {
     await browserManager.initialize();
@@ -13,16 +13,28 @@ async function debugSearch() {
     const searchUrl = "https://www.chictr.org.cn/searchproj.html?title=KRAS&btngo=btn";
     console.log(`正在访问: ${searchUrl}`);
     
+    // 设置请求头以模拟真实浏览器
+    await page.setExtraHTTPHeaders({
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'Accept-Language': 'zh-CN,zh;q=0.9',
+      'Connection': 'keep-alive',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1',
+      'sec-ch-ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"macOS"'
+    });
+    
     await page.goto(searchUrl, { waitUntil: "networkidle" });
     await browserManager.randomDelay(2000, 3000); // 增加延迟
     
     const html = await page.content();
-    console.log("页面标题:", await page.title());
+    const title = await page.title();
+    console.log("页面标题:", title);
     console.log("页面内容长度:", html.length);
-    
-    // 保存页面内容用于分析
-    // await Bun.write("debug-page.html", html);
-    console.log("页面内容已获取");
     
     // 检查页面是否包含特定文本
     if (html.includes("共检索到")) {
@@ -49,8 +61,18 @@ async function debugSearch() {
       console.log(JSON.stringify(results.slice(0, 3), null, 2));
     } else {
       console.log("没有解析到结果，显示部分HTML内容:");
-      // 显示HTML的前1000个字符
-      console.log(html.substring(0, 1000));
+      // 显示HTML的前2000个字符
+      console.log(html.substring(0, 2000));
+      
+      // 尝试查找可能的表格结构
+      console.log("\n尝试查找表格结构:");
+      const tableRegex = /<table[^>]*class=["'][^"']*table\d+[^"']*["'][^>]*>/i;
+      const tableMatch = html.match(tableRegex);
+      if (tableMatch) {
+        console.log("找到表格标签:", tableMatch[0]);
+      } else {
+        console.log("未找到预期的表格标签");
+      }
     }
     
     await browserManager.close();
@@ -62,4 +84,4 @@ async function debugSearch() {
   }
 }
 
-debugSearch();
+debugSearchContent();

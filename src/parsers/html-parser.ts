@@ -2,10 +2,18 @@ import * as cheerio from "cheerio";
 
 export interface TrialListItem {
   registration_number: string;
+  project_id: string; // 从 showproj.html?proj=XXX 中提取的ID
   title: string;
   study_type: string;
   registration_date: string;
   institution: string;
+}
+
+// 添加分页信息接口
+export interface SearchPagination {
+  totalResults: number;
+  totalPages: number;
+  currentPage: number;
 }
 
 export interface TrialDetail {
@@ -88,7 +96,7 @@ export interface TrialDetail {
 
 export class HtmlParser {
   // 解析搜索列表页
-  static parseSearchResults(html: string): TrialListItem[] {
+  static parseSearchResults(html: string): { results: TrialListItem[], pagination: SearchPagination } {
     const $ = cheerio.load(html);
     const results: TrialListItem[] = [];
 
@@ -106,10 +114,16 @@ export class HtmlParser {
         const institution = $(cells[2]).find("p").text().trim();
         const studyType = $(cells[3]).text().trim();
         const registrationDate = $(cells[4]).text().trim();
+        
+        // 提取 project_id （从showproj.html?proj=XXX中提取）
+        const href = titleLink.attr("href") || "";
+        const projMatch = href.match(/proj=(\d+)/);
+        const projectId = projMatch ? projMatch[1] : "";
 
-        if (registrationNumber && title) {
+        if (registrationNumber && title && projectId) {
           results.push({
             registration_number: registrationNumber,
+            project_id: projectId,
             title: title,
             study_type: studyType,
             registration_date: registrationDate,
@@ -119,7 +133,50 @@ export class HtmlParser {
       }
     });
 
-    return results;
+    // 提取分页信息
+    const pagination: SearchPagination = {
+      totalResults: 0,
+      totalPages: 1,
+      currentPage: 1
+    };
+
+    // 查找总结果数
+    const totalText = $("#data-total").text() || $("div:contains('共检索到')").first().text() || $("div.pagerbox").text();
+    if (totalText) {
+      const totalMatch = totalText.match(/\d+/g);
+      if (totalMatch && totalMatch.length > 0) {
+        // 取第一个数字作为总结果数
+        pagination.totalResults = parseInt(totalMatch[0], 10);
+        
+        // 如果有多个数字，第二个可能是总页数
+        if (totalMatch.length > 1) {
+          pagination.totalPages = parseInt(totalMatch[1], 10);
+        }
+      }
+    }
+
+    // 查找总页数
+    const pageText = $("div.pagination, .page, .pagerbox").text();
+    if (pageText) {
+      const pageMatch = pageText.match(/共\s*(\d+)\s*页/);
+      if (pageMatch) {
+        pagination.totalPages = parseInt(pageMatch[1], 10);
+      } else {
+        // 尝试其他模式
+        const pageMatch2 = pageText.match(/共(\d+)页/);
+        if (pageMatch2) {
+          pagination.totalPages = parseInt(pageMatch2[1], 10);
+        }
+      }
+      
+      // 查找当前页
+      const currentMatch = pageText.match(/第\s*(\d+)\s*页/) || pageText.match(/第(\d+)页/);
+      if (currentMatch) {
+        pagination.currentPage = parseInt(currentMatch[1], 10);
+      }
+    }
+
+    return { results, pagination };
   }
 
   // 解析详情页

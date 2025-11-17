@@ -11,7 +11,7 @@ ChiCTR MCP Server 是一个基于 Model Context Protocol (MCP) 的临床试验�
 ## 🌟 功能特点
 
 - **MCP 协议兼容**: 完全支持 Model Context Protocol 标准
-- **智能搜索**: 支持关键词搜索和时间范围筛选
+- **多维度搜索**: 支持按标题关键词、注册号、年份搜索
 - **详细信息**: 提供临床试验的完整详细信息
 - **高性能**: 内置智能缓存机制，提升查询速度
 - **反爬虫处理**: 使用浏览器自动化技术应对网站防护机制
@@ -43,17 +43,51 @@ node dist/index.js
 ## 📋 可用工具
 
 ### search_trials
-搜索临床试验
+搜索临床试验，支持按标题关键词、注册号、年份进行搜索
+
 ```json
+// 按关键词搜索
 {
   "name": "search_trials",
   "arguments": {
-    "keyword": "KRAS G12D",
-    "months": 6,
+    "keyword": "KRAS",
+    "max_results": 20
+  }
+}
+
+// 按注册号搜索
+{
+  "name": "search_trials",
+  "arguments": {
+    "registration_number": "ChiCTR2500111173"
+  }
+}
+
+// 按年份搜索
+{
+  "name": "search_trials",
+  "arguments": {
+    "year": 2024,
+    "max_results": 20
+  }
+}
+
+// 组合搜索
+{
+  "name": "search_trials",
+  "arguments": {
+    "keyword": "KRAS",
+    "year": 2024,
     "max_results": 10
   }
 }
 ```
+
+**参数说明**：
+- `keyword` (可选): 注册题目关键词
+- `registration_number` (可选): 临床试验注册号
+- `year` (可选): 注册年份，默认当前年份
+- `max_results` (可选): 最大返回结果数，默认20
 
 ### get_trial_detail
 查询试验详情
@@ -117,6 +151,43 @@ npx -y chictr-mcp-server
 - **Node-Cache**: 高性能缓存库
 - **MCP SDK**: Model Context Protocol 官方 SDK
 
+## 🔧 高级配置
+
+### 代理设置（可选）
+
+如果您需要使用代理访问 ChiCTR，可以通过环境变量配置：
+
+```bash
+# 设置 HTTP 代理
+export HTTP_PROXY=http://your-proxy-server:port
+
+# 或者 HTTPS 代理
+export HTTPS_PROXY=http://your-proxy-server:port
+
+# 然后启动服务
+npx -y chictr-mcp-server
+```
+
+#### MCP 客户端中使用代理
+```json
+{
+  "mcpServers": {
+    "chictr": {
+      "command": "npx",
+      "args": ["-y", "chictr-mcp-server"],
+      "env": {
+        "HTTP_PROXY": "http://your-proxy-server:port"
+      }
+    }
+  }
+}
+```
+
+**注意**：
+- 代理配置是可选的，大多数情况下不需要
+- 如果频繁触发验证码，建议使用代理或更换 IP
+- 本项目不提供代理服务，需要用户自行准备
+
 ## 📡 MCP 配置说明
 
 ### MCP 客户端配置
@@ -128,6 +199,31 @@ npx -y chictr-mcp-server
     "chictr": {
       "command": "npx",
       "args": ["-y", "chictr-mcp-server"]
+    }
+  }
+}
+```
+
+**升级到最新版本**：
+
+Cherrystudio 等 MCP 客户端可能会缓存旧版本，如果需要强制更新到最新版本：
+
+```bash
+# 清除 npx 缓存
+npx clear-npx-cache
+# 或者
+rm -rf ~/.npm/_npx
+
+# 然后重启 MCP 客户端
+```
+
+或者指定版本号：
+```json
+{
+  "mcpServers": {
+    "chictr": {
+      "command": "npx",
+      "args": ["-y", "chictr-mcp-server@1.2.0"]
     }
   }
 }

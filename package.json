@@ -1,6 +1,6 @@
 {
   "name": "chictr-mcp-server",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "description": "MCP Server for querying ChiCTR clinical trials",
   "main": "dist/index.js",
   "type": "module",
@@ -12,6 +12,7 @@
     "start": "node dist/index.js",
     "dev": "tsc && node dist/index.js",
     "prepare": "npm run build",
+    "postinstall": "playwright install chromium",
     "cli": "node dist/index.js"
   },
   "keywords": [
@@ -39,6 +40,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6"
   }
 }
