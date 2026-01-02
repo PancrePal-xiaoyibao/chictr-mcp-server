@@ -1,8 +1,44 @@
 # ChiCTR MCP Server
 
+[![npm version](https://img.shields.io/npm/v/chictr-mcp-server.svg)](https://www.npmjs.com/package/chictr-mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ChiCTR MCP Server is a Model Context Protocol (MCP) based clinical trial query service, specifically designed to query clinical trial information from the Chinese Clinical Trial Registry (ChiCTR).
 
+**Current Version**: v1.2.1
+
 [简体中文](./README.md) | English
+
+## 🔔 Release Notes
+
+### v1.2.1 (2025-01-17)
+- ✅ Updated README with multi-dimensional search examples
+- ✅ Added version upgrade guide
+- ✅ Provided Cherrystudio cache clearing solutions
+
+### v1.2.0 (2025-01-17)
+- ✅ Added search by registration number (registration_number parameter)
+- ✅ Added search by year (year parameter, defaults to current year)
+- ✅ All search parameters are now optional
+- ✅ Fixed detail query 400 error (using correct project_id)
+
+### v1.1.0 (2025-01-17)
+- ✅ Fixed pagination feature, supporting multi-page results
+- ✅ Added proxy configuration support (HTTP_PROXY/HTTPS_PROXY)
+- ✅ Added verification code detection with friendly error messages
+
+## 📍 Quick Navigation
+
+- [🎯 Supported MCP Service Types](#-supported-mcp-service-types)
+- [🌟 Key Features](#-key-features)
+- [🚀 Quick Start](#-quick-start)
+- [📋 Available Tools](#-available-tools)
+- [📡 MCP Configuration Guide](#-mcp-configuration-guide)
+
+## 🐛 Known Issues
+
+- Frequent requests may trigger slider verification codes, consider using proxy or increasing request intervals
+- Cannot manually handle verification codes in headless mode
 
 ## 🎯 Supported MCP Service Types
 
@@ -13,7 +49,7 @@ ChiCTR MCP Server is a Model Context Protocol (MCP) based clinical trial query s
 ## 🌟 Key Features
 
 - **MCP Protocol Compatible**: Fully supports Model Context Protocol standards
-- **Smart Search**: Supports keyword search and time range filtering
+- **Multi-dimensional Search**: Search by title keywords, registration number, and year
 - **Detailed Information**: Provides complete clinical trial details
 - **High Performance**: Built-in intelligent caching mechanism to improve query speed
 - **Anti-Crawler Handling**: Uses browser automation technology to handle website protection mechanisms
@@ -52,17 +88,51 @@ node dist/index.js
 ## 📋 Available Tools
 
 ### search_trials
-Search clinical trials
+Search clinical trials with support for multi-dimensional search by title, registration number, and year
+
 ```json
+// Search by keyword
 {
   "name": "search_trials",
   "arguments": {
-    "keyword": "KRAS G12D",
-    "months": 6,
+    "keyword": "KRAS",
+    "max_results": 20
+  }
+}
+
+// Search by registration number
+{
+  "name": "search_trials",
+  "arguments": {
+    "registration_number": "ChiCTR2500111173"
+  }
+}
+
+// Search by year
+{
+  "name": "search_trials",
+  "arguments": {
+    "year": 2024,
+    "max_results": 20
+  }
+}
+
+// Combined search
+{
+  "name": "search_trials",
+  "arguments": {
+    "keyword": "KRAS",
+    "year": 2024,
     "max_results": 10
   }
 }
 ```
+
+**Parameters**:
+- `keyword` (optional): Title keyword
+- `registration_number` (optional): Clinical trial registration number
+- `year` (optional): Registration year, defaults to current year
+- `max_results` (optional): Maximum number of results, defaults to 20
 
 ### get_trial_detail
 Get trial details
@@ -138,7 +208,32 @@ npx -y chictr-mcp-server
   "mcpServers": {
     "chictr": {
       "command": "npx",
-      "args": ["-y", "chictr-mcp-server"]
+      "args": ["-y", "chictr-mcp-server@latest"]
+    }
+  }
+}
+```
+
+**Upgrade to Latest Version**:
+
+Cherrystudio and other MCP clients may cache old versions. To force update to the latest version:
+
+```bash
+# Clear npx cache
+npx clear-npx-cache
+# Or
+rm -rf ~/.npm/_npx
+
+# Then restart MCP client
+```
+
+Or specify version number:
+```json
+{
+  "mcpServers": {
+    "chictr": {
+      "command": "npx",
+      "args": ["-y", "chictr-mcp-server@1.2.1"]
     }
   }
 }

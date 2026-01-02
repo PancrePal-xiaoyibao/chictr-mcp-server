@@ -1,6 +1,42 @@
 # ChiCTR MCP Server
 
+[![npm version](https://img.shields.io/npm/v/chictr-mcp-server.svg)](https://www.npmjs.com/package/chictr-mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ChiCTR MCP Server 是一个基于 Model Context Protocol (MCP) 的临床试验查询服务，专门用于查询中国临床试验注册中心 (ChiCTR) 的临床试验信息。
+
+**当前版本**: v1.2.1
+
+## 🔔 版本更新
+
+### v1.2.1 (2025-01-17)
+- ✅ 更新 README，添加多维度搜索示例
+- ✅ 添加版本升级指南
+- ✅ 提供 Cherrystudio 缓存清除方案
+
+### v1.2.0 (2025-01-17)
+- ✅ 新增按注册号搜索（registration_number 参数）
+- ✅ 新增按年份搜索（year 参数，默认当前年份）
+- ✅ 所有搜索参数改为可选
+- ✅ 修复详情查询 400 错误（使用正确的 project_id）
+
+### v1.1.0 (2025-01-17)
+- ✅ 修复分页功能，支持多页结果获取
+- ✅ 支持代理配置（HTTP_PROXY/HTTPS_PROXY）
+- ✅ 增加验证码检测与友好错误提示
+
+## 📍 快速导航
+
+- [🎯 支持的 MCP 服务类型](#-支持的-mcp-服务类型)
+- [🌟 功能特点](#-功能特点)
+- [🚀 快速开始](#-快速开始)
+- [📋 可用工具](#-可用工具)
+- [📡 MCP 配置说明](#-mcp-配置说明)
+
+## 🐛 已知问题
+
+- 频繁请求可能触发滑动验证码，建议使用代理或增加请求间隔
+- headless 模式下无法手动处理验证码
 
 ## 🎯 支持的 MCP 服务类型
 
@@ -223,7 +259,7 @@ rm -rf ~/.npm/_npx
   "mcpServers": {
     "chictr": {
       "command": "npx",
-      "args": ["-y", "chictr-mcp-server@1.2.0"]
+      "args": ["-y", "chictr-mcp-server@latest"]
     }
   }
 }
