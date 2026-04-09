@@ -60,6 +60,33 @@ ChiCTR MCP Server 是一个基于 Model Context Protocol (MCP) 的临床试验�
 
 ## 🚀 快速开始
 
+### MCP JSON 最简配置（推荐）
+
+将以下内容放入你的 MCP 客户端配置文件：
+
+```json
+{
+  "mcpServers": {
+    "chictr": {
+      "command": "npx",
+      "args": ["-y", "chictr-mcp-server@latest"]
+    }
+  }
+}
+```
+
+如果你已全局安装（`npm i -g chictr-mcp-server`），可用更短配置：
+
+```json
+{
+  "mcpServers": {
+    "chictr": {
+      "command": "chictr-mcp-server"
+    }
+  }
+}
+```
+
 ### 安装依赖
 ```bash
 npm install
@@ -160,6 +187,56 @@ node dist/index.js
 }
 ```
 
+### get_cache_stats_v2
+获取双层缓存统计（L1 + L2 SQLite）
+```json
+{
+  "name": "get_cache_stats_v2",
+  "arguments": {}
+}
+```
+
+### get_runtime_metrics
+获取运行时编排指标（限速/重试/挑战计数/会话统计）
+```json
+{
+  "name": "get_runtime_metrics",
+  "arguments": {}
+}
+```
+
+### get_access_state
+获取访问状态机信息（NORMAL/SUSPECTED/CHALLENGED/COOLDOWN/RECOVERY）
+```json
+{
+  "name": "get_access_state",
+  "arguments": {}
+}
+```
+
+### prepare_verification_session
+创建人工验证会话
+```json
+{
+  "name": "prepare_verification_session",
+  "arguments": {
+    "target_url": "https://www.chictr.org.cn/searchproj.html",
+    "timeout_ms": 300000
+  }
+}
+```
+
+### resume_after_verification
+人工验证完成后恢复访问状态
+```json
+{
+  "name": "resume_after_verification",
+  "arguments": {
+    "verification_id": "verify_xxx"
+  }
+}
+```
+
 ## 🛠️ CLI 命令行工具
 
 ### 安装 CLI
@@ -191,6 +268,7 @@ npx -y chictr-mcp-server
 - **Playwright**: 浏览器自动化工具
 - **Cheerio**: 服务器端 jQuery 实现
 - **Node-Cache**: 高性能缓存库
+- **SQLite (better-sqlite3)**: 持久化二级缓存
 - **MCP SDK**: Model Context Protocol 官方 SDK
 
 ## 🔧 高级配置

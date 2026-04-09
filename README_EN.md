@@ -62,6 +62,33 @@ ChiCTR MCP Server is a Model Context Protocol (MCP) based clinical trial query s
 
 ## 🚀 Quick Start
 
+### Minimal MCP JSON Config (Recommended)
+
+Put this in your MCP client config file:
+
+```json
+{
+  "mcpServers": {
+    "chictr": {
+      "command": "npx",
+      "args": ["-y", "chictr-mcp-server@latest"]
+    }
+  }
+}
+```
+
+If you already installed globally (`npm i -g chictr-mcp-server`), use:
+
+```json
+{
+  "mcpServers": {
+    "chictr": {
+      "command": "chictr-mcp-server"
+    }
+  }
+}
+```
+
 ### Install Dependencies
 ```bash
 npm install
@@ -169,6 +196,56 @@ Clear all cache
 }
 ```
 
+### get_cache_stats_v2
+Get dual-layer cache stats (L1 memory + L2 SQLite)
+```json
+{
+  "name": "get_cache_stats_v2",
+  "arguments": {}
+}
+```
+
+### get_runtime_metrics
+Get runtime orchestration metrics (rate-limit/retry/challenge/session)
+```json
+{
+  "name": "get_runtime_metrics",
+  "arguments": {}
+}
+```
+
+### get_access_state
+Get access state machine info (NORMAL/SUSPECTED/CHALLENGED/COOLDOWN/RECOVERY)
+```json
+{
+  "name": "get_access_state",
+  "arguments": {}
+}
+```
+
+### prepare_verification_session
+Create a manual verification session
+```json
+{
+  "name": "prepare_verification_session",
+  "arguments": {
+    "target_url": "https://www.chictr.org.cn/searchproj.html",
+    "timeout_ms": 300000
+  }
+}
+```
+
+### resume_after_verification
+Resume access state after manual verification
+```json
+{
+  "name": "resume_after_verification",
+  "arguments": {
+    "verification_id": "verify_xxx"
+  }
+}
+```
+
 ## 🛠️ CLI Command Line Tool
 
 ### Install CLI
@@ -202,6 +279,7 @@ npx -y chictr-mcp-server
 - **Playwright**: Browser automation tool
 - **Cheerio**: Server-side jQuery implementation
 - **Node-Cache**: High-performance caching library
+- **SQLite (better-sqlite3)**: Persistent L2 cache
 - **MCP SDK**: Official Model Context Protocol SDK
 
 ## 📡 MCP Configuration Guide
