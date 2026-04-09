@@ -5,9 +5,15 @@
 
 ChiCTR MCP Server 是一个基于 Model Context Protocol (MCP) 的临床试验查询服务，专门用于查询中国临床试验注册中心 (ChiCTR) 的临床试验信息。
 
-**当前版本**: v1.2.1
+**当前版本**: v2.0.0
 
 ## 🔔 版本更新
+
+### v2.0.0 (2026-04-09)
+- ✅ 新增请求编排层（限速/重试/熔断）
+- ✅ 新增 Session 池化与生命周期回收
+- ✅ 新增挑战状态机与恢复工具（get_access_state / prepare_verification_session / resume_after_verification）
+- ✅ 新增双层缓存（L1 内存 + L2 SQLite）与 get_cache_stats_v2
 
 ### v1.2.1 (2025-01-17)
 - ✅ 更新 README，添加多维度搜索示例
@@ -228,32 +234,7 @@ npx -y chictr-mcp-server
 
 ### MCP 客户端配置
 
-#### 使用 npx（推荐）
-```json
-{
-  "mcpServers": {
-    "chictr": {
-      "command": "npx",
-      "args": ["-y", "chictr-mcp-server"]
-    }
-  }
-}
-```
-
-**升级到最新版本**：
-
-Cherrystudio 等 MCP 客户端可能会缓存旧版本，如果需要强制更新到最新版本：
-
-```bash
-# 清除 npx 缓存
-npx clear-npx-cache
-# 或者
-rm -rf ~/.npm/_npx
-
-# 然后重启 MCP 客户端
-```
-
-或者指定版本号：
+#### 使用 npx（推荐，最简配置）
 ```json
 {
   "mcpServers": {

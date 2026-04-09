@@ -6,6 +6,7 @@ dist/
 *.tsbuildinfo
 playwright/.cache/
 cache/
+*.tgz
 
 # ignore dev folder
 

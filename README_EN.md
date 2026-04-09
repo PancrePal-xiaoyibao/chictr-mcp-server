@@ -5,11 +5,17 @@
 
 ChiCTR MCP Server is a Model Context Protocol (MCP) based clinical trial query service, specifically designed to query clinical trial information from the Chinese Clinical Trial Registry (ChiCTR).
 
-**Current Version**: v1.2.1
+**Current Version**: v2.0.0
 
 [简体中文](./README.md) | English
 
 ## 🔔 Release Notes
+
+### v2.0.0 (2026-04-09)
+- ✅ Added request orchestrator (rate-limit/retry/circuit-breaker)
+- ✅ Added session pooling with lifecycle recycling
+- ✅ Added challenge state machine and recovery tools
+- ✅ Added dual-layer cache (L1 memory + L2 SQLite) and `get_cache_stats_v2`
 
 ### v1.2.1 (2025-01-17)
 - ✅ Updated README with multi-dimensional search examples
@@ -227,13 +233,13 @@ rm -rf ~/.npm/_npx
 # Then restart MCP client
 ```
 
-Or specify version number:
+Minimal config (recommended):
 ```json
 {
   "mcpServers": {
     "chictr": {
       "command": "npx",
-      "args": ["-y", "chictr-mcp-server@1.2.1"]
+      "args": ["-y", "chictr-mcp-server@latest"]
     }
   }
 }
