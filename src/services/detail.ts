@@ -24,8 +24,6 @@ export async function getTrialDetail(
   
   // console.log(`[CACHE MISS] 详情缓存未命中，执行新请求: ${cacheKey}`);
 
-  const page = await browserManager.getPage();
-
   // 先尝试从缓存获取项目ID
   let projectId = getProjectIdByRegistrationNumber(registrationNumber);
   
@@ -37,47 +35,49 @@ export async function getTrialDetail(
   // 构建URL
   const url = `https://www.chictr.org.cn/showproj.html?proj=${projectId}`;
 
-  try {
-    await orchestrator.execute({
-      requestId: `detail-${projectId}-${Date.now()}`,
-      endpoint: "detail",
-      handler: async () => {
-        // 导航到页面
-        await page.goto(url, { waitUntil: "networkidle" });
-      },
-    });
-    
-    // 检查是否需要验证码
-    const pageTitle = await page.title();
-    if (pageTitle.includes("验证") || pageTitle.includes("Verification") || pageTitle.includes("滑动")) {
-      // 触发验证码，抛出错误提示用户
-      throw new Error(
-        "检测到滑动验证码，建议：\n" +
-        "1. 减少请求频率（增加延迟时间）\n" +
-        "2. 使用缓存避免重复请求\n" +
-        "3. 考虑更换网络环境或IP"
-      );
+  return browserManager.withPage(async (page, sessionId) => {
+    try {
+      await orchestrator.execute({
+        requestId: `detail-${sessionId}-${projectId}-${Date.now()}`,
+        endpoint: "detail",
+        handler: async () => {
+          // 导航到页面
+          await page.goto(url, { waitUntil: "networkidle" });
+        },
+      });
+
+      // 检查是否需要验证码
+      const pageTitle = await page.title();
+      if (pageTitle.includes("验证") || pageTitle.includes("Verification") || pageTitle.includes("滑动")) {
+        // 触发验证码，抛出错误提示用户
+        throw new Error(
+          "检测到滑动验证码，建议：\n" +
+          "1. 减少请求频率（增加延迟时间）\n" +
+          "2. 使用缓存避免重复请求\n" +
+          "3. 考虑更换网络环境或IP"
+        );
+      }
+
+      await browserManager.randomDelay(3000, 8000); // 增加延迟时间
+
+      // 检查是否页面加载成功
+      const title = await page.title();
+      if (title.includes("页面未找到") || title.includes("404")) {
+        throw new Error(`未找到注册号为 ${registrationNumber} 的试验`);
+      }
+
+      // 解析HTML
+      const html = await page.content();
+      const detail = HtmlParser.parseTrialDetail(html);
+
+      // 存储到缓存
+      detailCache.set(cacheKey, detail);
+
+      return detail;
+    } catch (error) {
+      throw new Error(`获取试验详情失败: ${error instanceof Error ? error.message : String(error)}`);
     }
-    
-    await browserManager.randomDelay(3000, 8000); // 增加延迟时间
-
-    // 检查是否页面加载成功
-    const title = await page.title();
-    if (title.includes("页面未找到") || title.includes("404")) {
-      throw new Error(`未找到注册号为 ${registrationNumber} 的试验`);
-    }
-
-    // 解析HTML
-    const html = await page.content();
-    const detail = HtmlParser.parseTrialDetail(html);
-    
-    // 存储到缓存
-    detailCache.set(cacheKey, detail);
-
-    return detail;
-  } catch (error) {
-    throw new Error(`获取试验详情失败: ${error instanceof Error ? error.message : String(error)}`);
-  }
+  });
 }
 
 // 添加清除详情缓存的函数

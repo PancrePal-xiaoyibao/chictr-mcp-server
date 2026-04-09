@@ -1,8 +1,9 @@
 import { chromium, Browser, Page } from "playwright";
+import { SessionManager, SessionStats } from "./runtime/session-manager.js";
 
 export class BrowserManager {
   private browser: Browser | null = null;
-  private page: Page | null = null;
+  private sessionManager: SessionManager | null = null;
 
   async initialize(): Promise<void> {
     if (this.browser) {
@@ -35,39 +36,40 @@ export class BrowserManager {
     }
 
     this.browser = await chromium.launch(launchOptions);
-
-    this.page = await this.browser.newPage({
-      userAgent:
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-      viewport: { width: 1920, height: 1080 },
+    this.sessionManager = new SessionManager(this.browser, {
+      maxRequestsPerSession: Number(process.env.SESSION_MAX_REQUESTS || 40),
+      sessionTTLMs: Number(process.env.SESSION_TTL_MS || 8 * 60 * 1000),
+      maxIdleMs: Number(process.env.SESSION_IDLE_MS || 2 * 60 * 1000),
+      recycleIntervalMs: Number(process.env.SESSION_RECYCLE_INTERVAL_MS || 30_000),
     });
-
-    // 添加浏览器指纹隐藏
-    await this.page.addInitScript(() => {
-      // @ts-ignore
-      delete navigator.__proto__.webdriver;
-      // @ts-ignore
-      navigator.__defineGetter__('languages', () => ['zh-CN', 'zh', 'en']);
-      // @ts-ignore
-      navigator.__defineGetter__('plugins', () => [1, 2, 3, 4, 5]);
-    });
-
-    // 设置超时
-    this.page.setDefaultTimeout(45000); // 增加到45秒
-    this.page.setDefaultNavigationTimeout(45000); // 增加到45秒
   }
 
-  async getPage(): Promise<Page> {
-    if (!this.page) {
+  async withPage<T>(handler: (page: Page, sessionId: string) => Promise<T>): Promise<T> {
+    if (!this.sessionManager) {
       await this.initialize();
     }
-    return this.page!;
+    const manager = this.sessionManager!;
+    const session = await manager.acquireSession();
+    const page = await session.context.newPage();
+
+    try {
+      page.setDefaultTimeout(45000);
+      page.setDefaultNavigationTimeout(45000);
+      return await handler(page, session.sessionId);
+    } finally {
+      await page.close().catch(() => {});
+      await manager.releaseSession(session.sessionId);
+    }
+  }
+
+  getSessionStats(): SessionStats | null {
+    return this.sessionManager?.getStats() || null;
   }
 
   async close(): Promise<void> {
-    if (this.page) {
-      await this.page.close();
-      this.page = null;
+    if (this.sessionManager) {
+      await this.sessionManager.shutdown();
+      this.sessionManager = null;
     }
     if (this.browser) {
       await this.browser.close();

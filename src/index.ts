@@ -196,7 +196,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: "text",
-              text: JSON.stringify(orchestrator.getMetrics(), null, 2),
+              text: JSON.stringify({
+                orchestrator: orchestrator.getMetrics(),
+                sessions: browserManager?.getSessionStats() || null
+              }, null, 2),
             },
           ],
         };
