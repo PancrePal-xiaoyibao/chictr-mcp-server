@@ -33,12 +33,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/chictr-mcp/chictr-mcp-server.git"
+    "url": "https://github.com/PancrePal-xiaoyibao/chictr-mcp-server.git"
   },
   "bugs": {
-    "url": "https://github.com/chictr-mcp/chictr-mcp-server/issues"
+    "url": "https://github.com/PancrePal-xiaoyibao/chictr-mcp-server/issues"
   },
-  "homepage": "https://github.com/chictr-mcp/chictr-mcp-server#readme",
+  "homepage": "https://github.com/PancrePal-xiaoyibao/chictr-mcp-server#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.22.0",
     "better-sqlite3": "^12.8.0",
