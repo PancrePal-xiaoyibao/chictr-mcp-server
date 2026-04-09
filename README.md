@@ -5,9 +5,14 @@
 
 ChiCTR MCP Server 是一个基于 Model Context Protocol (MCP) 的临床试验查询服务，专门用于查询中国临床试验注册中心 (ChiCTR) 的临床试验信息。
 
-**当前版本**: v2.0.0
+**当前版本**: v2.0.1
 
 ## 🔔 版本更新
+
+### v2.0.1 (2026-04-09)
+- ✅ 修复 Cherry Studio 场景下 `./cache` 路径导致的启动失败（ENOENT）
+- ✅ 默认缓存路径调整为 `~/.chictr/cache/chictr_cache.db`
+- ✅ 增加 `/tmp/chictr/cache/chictr_cache.db` 兜底路径
 
 ### v2.0.0 (2026-04-09)
 - ✅ 新增请求编排层（限速/重试/熔断）
