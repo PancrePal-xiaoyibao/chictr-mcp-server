@@ -2,6 +2,7 @@ import { BrowserManager } from "../browser.js";
 import { HtmlParser, TrialListItem } from "../parsers/html-parser.js";
 import NodeCache from "node-cache";
 import { RequestOrchestrator } from "../runtime/orchestrator.js";
+import { ChallengeDetector } from "../runtime/challenge-detector.js";
 
 // 创建缓存实例
 const searchCache = new NodeCache({ stdTTL: 300, checkperiod: 60 }); // 5分钟缓存
@@ -11,6 +12,7 @@ const projectIdCache = new NodeCache({ stdTTL: 3600, checkperiod: 120 }); // 1�
 export async function searchTrials(
   browserManager: BrowserManager,
   orchestrator: RequestOrchestrator,
+  challengeDetector: ChallengeDetector,
   keyword?: string,         // 注册题目（可选）
   registrationNumber?: string, // 注册号（可选）
   year?: number,            // 年份（可选，默认当前年份）
@@ -24,6 +26,13 @@ export async function searchTrials(
   if (cachedResult) {
     // console.log(`[CACHE HIT] 搜索缓存命中: ${cacheKey}`);
     return cachedResult;
+  }
+
+  if (!challengeDetector.canProceed()) {
+    const snapshot = challengeDetector.getSnapshot();
+    throw new Error(
+      `访问处于冷却期，请稍后重试。cooldown_remaining_ms=${snapshot.cooldown_remaining_ms}`
+    );
   }
   
   // console.log(`[CACHE MISS] 搜索缓存未命中，执行新请求: ${cacheKey}`);
@@ -109,6 +118,13 @@ export async function searchTrials(
         // 检查是否需要验证码
         const pageTitle = await page.title();
         if (pageTitle.includes("验证") || pageTitle.includes("Verification") || pageTitle.includes("滑动")) {
+          challengeDetector.reportChallenge([
+            {
+              type: "TITLE",
+              confidence: 0.9,
+              details: `title=${pageTitle}`,
+            },
+          ]);
           // 触发验证码，抛出错误提示用户
           throw new Error(
             "检测到滑动验证码，建议：\n" +
@@ -165,6 +181,7 @@ export async function searchTrials(
 
     // 存储到缓存
     searchCache.set(cacheKey, limitedResults);
+    challengeDetector.recordSuccess();
 
     return limitedResults;
   });

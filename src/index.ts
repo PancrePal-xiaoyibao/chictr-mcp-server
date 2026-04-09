@@ -12,6 +12,7 @@ import { searchTrials, getSearchCacheStats, clearSearchCache } from "./services/
 import { getTrialDetail, getDetailCacheStats, clearDetailCache } from "./services/detail.js";
 import { RequestOrchestrator } from "./runtime/orchestrator.js";
 import { toMcpErrorText } from "./runtime/errors.js";
+import { ChallengeDetector } from "./runtime/challenge-detector.js";
 
 // 定义工具
 const TOOLS: Tool[] = [
@@ -80,6 +81,47 @@ const TOOLS: Tool[] = [
       properties: {},
     },
   },
+  {
+    name: "get_access_state",
+    description: "获取访问状态机信息（NORMAL/SUSPECTED/CHALLENGED/COOLDOWN/RECOVERY）",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "prepare_verification_session",
+    description: "创建人工验证会话（用于挑战后人工恢复流程）",
+    inputSchema: {
+      type: "object",
+      properties: {
+        target_url: {
+          type: "string",
+          description: "目标URL（可选）",
+        },
+        timeout_ms: {
+          type: "number",
+          description: "会话超时时间，默认300000毫秒",
+          default: 300000,
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "resume_after_verification",
+    description: "人工验证完成后恢复访问状态",
+    inputSchema: {
+      type: "object",
+      properties: {
+        verification_id: {
+          type: "string",
+          description: "prepare_verification_session返回的verification_id",
+        },
+      },
+      required: ["verification_id"],
+    },
+  },
 ];
 
 // 创建服务器
@@ -98,6 +140,23 @@ const server = new Server(
 // 浏览器管理器
 let browserManager: BrowserManager | null = null;
 const orchestrator = RequestOrchestrator.createDefault();
+const challengeDetector = new ChallengeDetector(
+  Number(process.env.CHALLENGE_COOLDOWN_MS || 10 * 60 * 1000)
+);
+
+const verificationSessions = new Map<
+  string,
+  { id: string; targetUrl: string; createdAt: number; expiresAt: number; status: "pending" | "recovered" | "expired" }
+>();
+
+function cleanupVerificationSessions(now: number = Date.now()) {
+  for (const [id, session] of verificationSessions.entries()) {
+    if (session.status === "pending" && now > session.expiresAt) {
+      session.status = "expired";
+      verificationSessions.set(id, session);
+    }
+  }
+}
 
 // 列出可用工具
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -125,6 +184,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const results = await searchTrials(
           browserManager,
           orchestrator,
+          challengeDetector,
           keyword,
           registrationNumber,
           year,
@@ -148,7 +208,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           throw new Error("registration_number 参数是必需的");
         }
 
-        const detail = await getTrialDetail(browserManager, orchestrator, registrationNumber);
+        const detail = await getTrialDetail(
+          browserManager,
+          orchestrator,
+          challengeDetector,
+          registrationNumber
+        );
 
         return {
           content: [
@@ -198,8 +263,94 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               type: "text",
               text: JSON.stringify({
                 orchestrator: orchestrator.getMetrics(),
-                sessions: browserManager?.getSessionStats() || null
+                sessions: browserManager?.getSessionStats() || null,
+                access: challengeDetector.getSnapshot(),
               }, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_access_state": {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(challengeDetector.getSnapshot(), null, 2),
+            },
+          ],
+        };
+      }
+
+      case "prepare_verification_session": {
+        cleanupVerificationSessions();
+        const targetUrl =
+          (args?.target_url as string) || "https://www.chictr.org.cn/searchproj.html";
+        const timeoutMs = Number(args?.timeout_ms || 300000);
+        const clampedTimeout = Math.min(Math.max(timeoutMs, 60000), 10 * 60 * 1000);
+        const now = Date.now();
+        const id = `verify_${now}_${Math.random().toString(36).slice(2, 8)}`;
+        verificationSessions.set(id, {
+          id,
+          targetUrl,
+          createdAt: now,
+          expiresAt: now + clampedTimeout,
+          status: "pending",
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  verification_id: id,
+                  status: "pending_manual_verification",
+                  target_url: targetUrl,
+                  expires_at: new Date(now + clampedTimeout).toISOString(),
+                  note: "请在本地浏览器完成验证后调用 resume_after_verification。",
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+
+      case "resume_after_verification": {
+        cleanupVerificationSessions();
+        const verificationId = (args?.verification_id as string) || "";
+        const session = verificationSessions.get(verificationId);
+        if (!session) {
+          throw new Error("verification_id 无效或不存在");
+        }
+        if (session.status !== "pending") {
+          throw new Error(`verification_id 状态不可恢复: ${session.status}`);
+        }
+        if (Date.now() > session.expiresAt) {
+          session.status = "expired";
+          verificationSessions.set(verificationId, session);
+          throw new Error("verification_id 已过期，请重新创建");
+        }
+
+        session.status = "recovered";
+        verificationSessions.set(verificationId, session);
+        challengeDetector.forceRecovery();
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  status: "recovered",
+                  verification_id: verificationId,
+                  access_state: challengeDetector.getSnapshot(),
+                },
+                null,
+                2
+              ),
             },
           ],
         };
