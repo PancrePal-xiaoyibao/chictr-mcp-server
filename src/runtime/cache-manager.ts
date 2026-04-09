@@ -1,7 +1,8 @@
 import Database from "better-sqlite3";
 import NodeCache from "node-cache";
 import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
+import { homedir } from "node:os";
 
 export interface CacheStatsV2 {
   l1_hits: number;
@@ -23,9 +24,11 @@ export class CacheManager {
     l2Misses: 0,
   };
 
-  constructor(dbPath: string = process.env.CACHE_DB_PATH || "./cache/chictr_cache.db") {
-    mkdirSync(dirname(dbPath), { recursive: true });
-    this.db = new Database(dbPath);
+  constructor(
+    dbPath: string = process.env.CACHE_DB_PATH || join(homedir(), ".chictr", "cache", "chictr_cache.db")
+  ) {
+    const finalDbPath = this.ensureDbPath(dbPath);
+    this.db = new Database(finalDbPath);
     this.db.pragma("journal_mode = WAL");
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS cache_entries (
@@ -36,6 +39,19 @@ export class CacheManager {
       );
       CREATE INDEX IF NOT EXISTS idx_cache_created_at ON cache_entries(created_at);
     `);
+  }
+
+  private ensureDbPath(preferredPath: string): string {
+    const preferredDir = dirname(preferredPath);
+    try {
+      mkdirSync(preferredDir, { recursive: true });
+      return preferredPath;
+    } catch {
+      // Cherry 等 GUI 场景下 cwd 可能不可用，兜底到系统临时目录
+      const fallbackPath = join("/tmp", "chictr", "cache", "chictr_cache.db");
+      mkdirSync(dirname(fallbackPath), { recursive: true });
+      return fallbackPath;
+    }
   }
 
   async get<T>(key: string): Promise<T | undefined> {
