@@ -1,11 +1,86 @@
 import { BrowserManager } from "../browser.js";
 import { HtmlParser, TrialDetail } from "../parsers/html-parser.js";
-import { getProjectIdByRegistrationNumber } from "./search.js";
+import { getProjectIdByRegistrationNumber, searchTrials } from "./search.js";
 import { RequestOrchestrator } from "../runtime/orchestrator.js";
 import { ChallengeDetector } from "../runtime/challenge-detector.js";
 import { globalCacheManager } from "../runtime/cache-singleton.js";
 
 const DETAIL_TTL_MS = 10 * 60 * 1000;
+
+function isDetailEmpty(detail: TrialDetail): boolean {
+  const basic = detail.basic_info;
+  const study = detail.study_info;
+  const contact = detail.contact_info;
+  return ![
+    basic.registration_number,
+    basic.title,
+    basic.scientific_title,
+    study.disease,
+    study.objectives,
+    contact.applicant,
+    contact.study_leader,
+  ].some((v) => (v || "").trim().length > 0);
+}
+
+function buildFallbackDetail(html: string, url: string, registrationNumber: string): TrialDetail {
+  const plain = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const snippet = plain.slice(0, 6000);
+  const titleGuess = (plain.match(/(注册题目|Public title|Scientific title)\s*[:：]\s*([^。；;]{5,120})/)?.[2] || "").trim();
+
+  return {
+    basic_info: {
+      registration_number: registrationNumber,
+      title: titleGuess,
+      title_en: "",
+      scientific_title: "",
+      scientific_title_en: "",
+      registration_status: "",
+      registration_status_en: "",
+      registration_date: "",
+      last_update_date: "",
+    },
+    contact_info: {
+      applicant: "",
+      applicant_en: "",
+      study_leader: "",
+      study_leader_en: "",
+      applicant_phone: "",
+      study_leader_phone: "",
+      applicant_email: "",
+      study_leader_email: "",
+      applicant_institution: "",
+      applicant_institution_en: "",
+      leader_institution: "",
+      leader_institution_en: "",
+    },
+    study_info: {
+      disease: "",
+      disease_en: "",
+      study_type: "",
+      study_type_en: "",
+      study_phase: "",
+      study_phase_en: "",
+      study_design: "",
+      study_design_en: "",
+      objectives: "",
+      objectives_en: "",
+    },
+    sponsor_info: {
+      primary_sponsor: "",
+      primary_sponsor_en: "",
+      funding_source: "",
+      funding_source_en: "",
+    },
+    raw_text: snippet,
+    source_url: url,
+  };
+}
 
 export async function getTrialDetail(
   browserManager: BrowserManager,
@@ -18,7 +93,7 @@ export async function getTrialDetail(
   
   // 检查缓存
   const cachedResult = await globalCacheManager.get<TrialDetail>(cacheKey);
-  if (cachedResult) {
+  if (cachedResult && !isDetailEmpty(cachedResult)) {
     // console.log(`[CACHE HIT] 详情缓存命中: ${cacheKey}`);
     return cachedResult;
   }
@@ -35,7 +110,25 @@ export async function getTrialDetail(
   // 先尝试从缓存获取项目ID
   let projectId = getProjectIdByRegistrationNumber(registrationNumber);
   
-  // 如果缓存中没有，则从注册号推导（兼容旧逻辑）
+  // 如果缓存中没有，先按注册号搜索一次，拿到真实 project_id
+  if (!projectId) {
+    try {
+      await searchTrials(
+        browserManager,
+        orchestrator,
+        challengeDetector,
+        undefined,
+        registrationNumber,
+        undefined,
+        1
+      );
+      projectId = getProjectIdByRegistrationNumber(registrationNumber);
+    } catch {
+      // 忽略，继续走兼容旧逻辑兜底
+    }
+  }
+
+  // 如果仍然没有，则从注册号推导（兼容旧逻辑兜底）
   if (!projectId) {
     projectId = registrationNumber.replace("ChiCTR", "");
   }
@@ -85,11 +178,15 @@ export async function getTrialDetail(
       const html = await page.content();
       const detail = HtmlParser.parseTrialDetail(html);
 
+      const finalDetail = isDetailEmpty(detail)
+        ? buildFallbackDetail(html, url, registrationNumber)
+        : detail;
+
       // 存储到缓存
-      await globalCacheManager.set(cacheKey, detail, DETAIL_TTL_MS);
+      await globalCacheManager.set(cacheKey, finalDetail, DETAIL_TTL_MS);
       challengeDetector.recordSuccess();
 
-      return detail;
+      return finalDetail;
     } catch (error) {
       throw new Error(`获取试验详情失败: ${error instanceof Error ? error.message : String(error)}`);
     }

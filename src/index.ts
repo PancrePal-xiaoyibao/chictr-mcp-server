@@ -136,7 +136,7 @@ const TOOLS: Tool[] = [
 const server = new Server(
   {
     name: "chictr-mcp-server",
-    version: "2.0.1",
+    version: "2.0.2",
   },
   {
     capabilities: {

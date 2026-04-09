@@ -92,6 +92,8 @@ export interface TrialDetail {
   inclusion_criteria_en?: string;
   exclusion_criteria?: string;
   exclusion_criteria_en?: string;
+  raw_text?: string;
+  source_url?: string;
 }
 
 export class HtmlParser {

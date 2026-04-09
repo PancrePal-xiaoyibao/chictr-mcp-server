@@ -38,8 +38,13 @@ export async function searchTrials(
   // console.log(`[CACHE MISS] 搜索缓存未命中，执行新请求: ${cacheKey}`);
 
   return browserManager.withPage(async (page, sessionId) => {
-    // 默认年份为当前年份
-    const searchYear = year || new Date().getFullYear();
+    // 默认年份：普通关键词搜索用当前年；按注册号精确搜索时不强制年份过滤
+    const searchYear =
+      year !== undefined
+        ? year
+        : registrationNumber
+          ? undefined
+          : new Date().getFullYear();
 
     // 存储所有结果
     let allResults: TrialListItem[] = [];
