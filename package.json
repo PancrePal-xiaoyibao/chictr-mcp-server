@@ -34,12 +34,14 @@
   "homepage": "https://github.com/chictr-mcp/chictr-mcp-server#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.22.0",
+    "better-sqlite3": "^12.8.0",
     "cheerio": "^1.1.2",
     "node-cache": "^5.1.2",
     "playwright": "^1.56.1",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.10.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6"

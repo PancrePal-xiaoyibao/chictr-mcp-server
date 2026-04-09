@@ -1,12 +1,11 @@
 import { BrowserManager } from "../browser.js";
 import { HtmlParser, TrialDetail } from "../parsers/html-parser.js";
-import NodeCache from "node-cache";
 import { getProjectIdByRegistrationNumber } from "./search.js";
 import { RequestOrchestrator } from "../runtime/orchestrator.js";
 import { ChallengeDetector } from "../runtime/challenge-detector.js";
+import { globalCacheManager } from "../runtime/cache-singleton.js";
 
-// 创建缓存实例
-const detailCache = new NodeCache({ stdTTL: 600, checkperiod: 120 }); // 10分钟缓存
+const DETAIL_TTL_MS = 10 * 60 * 1000;
 
 export async function getTrialDetail(
   browserManager: BrowserManager,
@@ -18,7 +17,7 @@ export async function getTrialDetail(
   const cacheKey = `detail_${registrationNumber}`;
   
   // 检查缓存
-  const cachedResult = detailCache.get<TrialDetail>(cacheKey);
+  const cachedResult = await globalCacheManager.get<TrialDetail>(cacheKey);
   if (cachedResult) {
     // console.log(`[CACHE HIT] 详情缓存命中: ${cacheKey}`);
     return cachedResult;
@@ -87,7 +86,7 @@ export async function getTrialDetail(
       const detail = HtmlParser.parseTrialDetail(html);
 
       // 存储到缓存
-      detailCache.set(cacheKey, detail);
+      await globalCacheManager.set(cacheKey, detail, DETAIL_TTL_MS);
       challengeDetector.recordSuccess();
 
       return detail;
@@ -99,16 +98,20 @@ export async function getTrialDetail(
 
 // 添加清除详情缓存的函数
 export function clearDetailCache(): void {
-  detailCache.flushAll();
+  globalCacheManager.clearAll();
   // console.log("[CACHE] 详情缓存已清除");
 }
 
 // 获取缓存统计信息
 export function getDetailCacheStats(): { keys: number; hits: number; misses: number } {
-  const stats = detailCache.getStats();
+  const stats = globalCacheManager.getStats();
   return {
-    keys: detailCache.keys().length,
-    hits: stats.hits || 0,
-    misses: stats.misses || 0
+    keys: stats.l1_keys + stats.l2_keys,
+    hits: stats.l1_hits + stats.l2_hits,
+    misses: stats.l1_misses + stats.l2_misses
   };
+}
+
+export function getDetailCacheStatsV2() {
+  return globalCacheManager.getStats();
 }

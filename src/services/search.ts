@@ -3,9 +3,9 @@ import { HtmlParser, TrialListItem } from "../parsers/html-parser.js";
 import NodeCache from "node-cache";
 import { RequestOrchestrator } from "../runtime/orchestrator.js";
 import { ChallengeDetector } from "../runtime/challenge-detector.js";
+import { globalCacheManager } from "../runtime/cache-singleton.js";
 
-// 创建缓存实例
-const searchCache = new NodeCache({ stdTTL: 300, checkperiod: 60 }); // 5分钟缓存
+const SEARCH_TTL_MS = 5 * 60 * 1000;
 // 创建项目ID映射缓存（注册号 -> 项目ID）
 const projectIdCache = new NodeCache({ stdTTL: 3600, checkperiod: 120 }); // 1小时缓存
 
@@ -22,7 +22,7 @@ export async function searchTrials(
   const cacheKey = `search_${keyword || ''}_${registrationNumber || ''}_${year || ''}_${maxResults}`;
   
   // 检查缓存
-  const cachedResult = searchCache.get<TrialListItem[]>(cacheKey);
+  const cachedResult = await globalCacheManager.get<TrialListItem[]>(cacheKey);
   if (cachedResult) {
     // console.log(`[CACHE HIT] 搜索缓存命中: ${cacheKey}`);
     return cachedResult;
@@ -180,7 +180,7 @@ export async function searchTrials(
     const limitedResults = allResults.slice(0, maxResults);
 
     // 存储到缓存
-    searchCache.set(cacheKey, limitedResults);
+    await globalCacheManager.set(cacheKey, limitedResults, SEARCH_TTL_MS);
     challengeDetector.recordSuccess();
 
     return limitedResults;
@@ -189,19 +189,23 @@ export async function searchTrials(
 
 // 添加清除搜索缓存的函数
 export function clearSearchCache(): void {
-  searchCache.flushAll();
+  globalCacheManager.clearAll();
   projectIdCache.flushAll();
   // console.log("[CACHE] 搜索缓存已清除");
 }
 
 // 获取缓存统计信息
 export function getSearchCacheStats(): { keys: number; hits: number; misses: number } {
-  const stats = searchCache.getStats();
+  const stats = globalCacheManager.getStats();
   return {
-    keys: searchCache.keys().length,
-    hits: stats.hits || 0,
-    misses: stats.misses || 0
+    keys: stats.l1_keys + stats.l2_keys,
+    hits: stats.l1_hits + stats.l2_hits,
+    misses: stats.l1_misses + stats.l2_misses
   };
+}
+
+export function getSearchCacheStatsV2() {
+  return globalCacheManager.getStats();
 }
 
 // 根据注册号获取项目ID

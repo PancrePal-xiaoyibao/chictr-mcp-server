@@ -8,7 +8,7 @@ import {
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { BrowserManager } from "./browser.js";
-import { searchTrials, getSearchCacheStats, clearSearchCache } from "./services/search.js";
+import { searchTrials, getSearchCacheStats, clearSearchCache, getSearchCacheStatsV2 } from "./services/search.js";
 import { getTrialDetail, getDetailCacheStats, clearDetailCache } from "./services/detail.js";
 import { RequestOrchestrator } from "./runtime/orchestrator.js";
 import { toMcpErrorText } from "./runtime/errors.js";
@@ -68,6 +68,14 @@ const TOOLS: Tool[] = [
   {
     name: "clear_cache",
     description: "清除所有缓存数据",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "get_cache_stats_v2",
+    description: "获取双层缓存统计（L1内存 + L2 SQLite）",
     inputSchema: {
       type: "object",
       properties: {},
@@ -251,6 +259,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: "text",
               text: JSON.stringify({ message: "所有缓存已清除" }, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_cache_stats_v2": {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(getSearchCacheStatsV2(), null, 2),
             },
           ],
         };
