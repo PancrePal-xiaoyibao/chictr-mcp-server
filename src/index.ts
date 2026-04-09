@@ -10,6 +10,8 @@ import {
 import { BrowserManager } from "./browser.js";
 import { searchTrials, getSearchCacheStats, clearSearchCache } from "./services/search.js";
 import { getTrialDetail, getDetailCacheStats, clearDetailCache } from "./services/detail.js";
+import { RequestOrchestrator } from "./runtime/orchestrator.js";
+import { toMcpErrorText } from "./runtime/errors.js";
 
 // 定义工具
 const TOOLS: Tool[] = [
@@ -70,6 +72,14 @@ const TOOLS: Tool[] = [
       properties: {},
     },
   },
+  {
+    name: "get_runtime_metrics",
+    description: "获取运行时编排指标（请求总数、重试次数、挑战次数等）",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
 ];
 
 // 创建服务器
@@ -87,6 +97,7 @@ const server = new Server(
 
 // 浏览器管理器
 let browserManager: BrowserManager | null = null;
+const orchestrator = RequestOrchestrator.createDefault();
 
 // 列出可用工具
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -113,6 +124,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         const results = await searchTrials(
           browserManager,
+          orchestrator,
           keyword,
           registrationNumber,
           year,
@@ -136,7 +148,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           throw new Error("registration_number 参数是必需的");
         }
 
-        const detail = await getTrialDetail(browserManager, registrationNumber);
+        const detail = await getTrialDetail(browserManager, orchestrator, registrationNumber);
 
         return {
           content: [
@@ -179,6 +191,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case "get_runtime_metrics": {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(orchestrator.getMetrics(), null, 2),
+            },
+          ],
+        };
+      }
+
       default:
         throw new Error(`未知的工具: ${name}`);
     }
@@ -188,7 +211,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       content: [
         {
           type: "text",
-          text: JSON.stringify({ error: errorMessage }, null, 2),
+          text: toMcpErrorText(errorMessage),
         },
       ],
       isError: true,

@@ -1,6 +1,7 @@
 import { BrowserManager } from "../browser.js";
 import { HtmlParser, TrialListItem } from "../parsers/html-parser.js";
 import NodeCache from "node-cache";
+import { RequestOrchestrator } from "../runtime/orchestrator.js";
 
 // 创建缓存实例
 const searchCache = new NodeCache({ stdTTL: 300, checkperiod: 60 }); // 5分钟缓存
@@ -9,6 +10,7 @@ const projectIdCache = new NodeCache({ stdTTL: 3600, checkperiod: 120 }); // 1�
 
 export async function searchTrials(
   browserManager: BrowserManager,
+  orchestrator: RequestOrchestrator,
   keyword?: string,         // 注册题目（可选）
   registrationNumber?: string, // 注册号（可选）
   year?: number,            // 年份（可选，默认当前年份）
@@ -75,29 +77,35 @@ export async function searchTrials(
         'sec-ch-ua-platform': '"macOS"'
       });
 
-      // 导航到页面，增加超时时间并添加错误处理
-      try {
-        await page.goto(url, { 
-          waitUntil: "networkidle",
-          timeout: 45000 // 增加到45秒超时
-        });
-      } catch (navigationError) {
-        // 如果networkidle超时，尝试使用load事件
-        try {
-          await page.goto(url, { 
-            waitUntil: "load",
-            timeout: 30000
-          });
-        } catch (loadError) {
-          // 如果load也失败，尝试domcontentloaded
-          await page.goto(url, { 
-            waitUntil: "domcontentloaded",
-            timeout: 20000
-          });
-          // 等待额外时间确保页面加载
-          await browserManager.randomDelay(2000, 4000);
-        }
-      }
+      await orchestrator.execute({
+        requestId: `search-${currentPage}-${Date.now()}`,
+        endpoint: "search",
+        handler: async () => {
+          // 导航到页面，增加超时时间并添加错误处理
+          try {
+            await page.goto(url, {
+              waitUntil: "networkidle",
+              timeout: 45000 // 增加到45秒超时
+            });
+          } catch (navigationError) {
+            // 如果networkidle超时，尝试使用load事件
+            try {
+              await page.goto(url, {
+                waitUntil: "load",
+                timeout: 30000
+              });
+            } catch (loadError) {
+              // 如果load也失败，尝试domcontentloaded
+              await page.goto(url, {
+                waitUntil: "domcontentloaded",
+                timeout: 20000
+              });
+              // 等待额外时间确保页面加载
+              await browserManager.randomDelay(2000, 4000);
+            }
+          }
+        },
+      });
       
       // 检查是否需要验证码
       const pageTitle = await page.title();

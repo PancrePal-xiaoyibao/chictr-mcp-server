@@ -2,12 +2,14 @@ import { BrowserManager } from "../browser.js";
 import { HtmlParser, TrialDetail } from "../parsers/html-parser.js";
 import NodeCache from "node-cache";
 import { getProjectIdByRegistrationNumber } from "./search.js";
+import { RequestOrchestrator } from "../runtime/orchestrator.js";
 
 // 创建缓存实例
 const detailCache = new NodeCache({ stdTTL: 600, checkperiod: 120 }); // 10分钟缓存
 
 export async function getTrialDetail(
   browserManager: BrowserManager,
+  orchestrator: RequestOrchestrator,
   registrationNumber: string
 ): Promise<TrialDetail> {
   // 生成缓存键
@@ -36,8 +38,14 @@ export async function getTrialDetail(
   const url = `https://www.chictr.org.cn/showproj.html?proj=${projectId}`;
 
   try {
-    // 导航到页面
-    await page.goto(url, { waitUntil: "networkidle" });
+    await orchestrator.execute({
+      requestId: `detail-${projectId}-${Date.now()}`,
+      endpoint: "detail",
+      handler: async () => {
+        // 导航到页面
+        await page.goto(url, { waitUntil: "networkidle" });
+      },
+    });
     
     // 检查是否需要验证码
     const pageTitle = await page.title();
