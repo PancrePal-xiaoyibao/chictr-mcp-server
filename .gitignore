@@ -18,3 +18,23 @@ final-*.cjs
 validate-*.cjs
 debug-*.mjs
 detail-page.html
+
+# 测试编译输出（与 dist/ 分离，避免被打进发布包）
+dist-test/
+
+# Python 字节码缓存
+__pycache__/
+*.pyc
+
+# Python 虚拟环境（由 chictr-mcp-server setup 生成，约 325MB，绝不入库）
+.venv/
+venv/
+
+# 本地工具目录
+.workbuddy/
+
+# 空文件/临时抓包样本
+4-page-url.md
+
+# 含真实会话 cookie 的抓包样本，仅本地保留
+dev/ictrp-notes/

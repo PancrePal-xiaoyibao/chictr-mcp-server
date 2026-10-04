@@ -1,14 +1,16 @@
 {
   "name": "chictr-mcp-server",
-  "version": "2.0.2",
+  "version": "3.0.0",
   "description": "MCP Server for querying ChiCTR clinical trials",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "chictr-mcp-server": "./dist/index.js"
+    "chictr-mcp-server": "./dist/index.js",
+    "chictr-setup": "./dist/cli/setup-cli.js"
   },
   "files": [
     "dist",
+    "sidecar",
     "README.md",
     "README_EN.md",
     "LICENSE",
@@ -18,9 +20,13 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc && node dist/index.js",
-    "test": "npm run build && node --test dist/**/*.test.js",
+    "test": "npx tsc -p tsconfig.test.json && node --test dist-test/**/*.test.js",
     "prepare": "npm run build",
-    "postinstall": "playwright install chromium",
+    "prepack": "node scripts/prune-tests.mjs",
+    "doctor": "node dist/cli/setup-cli.js doctor",
+    "setup": "node dist/cli/setup-cli.js setup",
+    "sidecar": "node dist/cli/setup-cli.js sidecar",
+    "postinstall": "node dist/cli/setup-cli.js postinstall",
     "cli": "node dist/index.js"
   },
   "keywords": [

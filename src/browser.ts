@@ -1,4 +1,4 @@
-import { chromium, Browser, Page } from "playwright";
+import { chromium, Browser, LaunchOptions, Page } from "playwright";
 import { SessionManager, SessionStats } from "./runtime/session-manager.js";
 
 export class BrowserManager {
@@ -10,29 +10,27 @@ export class BrowserManager {
       return;
     }
 
-    // 支持通过环境变量配置代理（可选）
     const proxy = process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
-    const launchOptions: any = {
-      headless: true, // 使用headless模式，适合npx远程执行
+    const launchOptions: LaunchOptions = {
+      headless: true,
       args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins",
-        "--disable-site-isolation-trials",
         "--disable-blink-features=AutomationControlled",
-        "--disable-gpu", // 禁用GPU加速，提高服务器兼容性
-        "--single-process", // 使用单进程模式，减少资源占用
-        "--no-zygote" // 禁用zygote进程
+        "--disable-gpu",
       ],
     };
 
-    // 如果配置了代理，则使用代理
     if (proxy) {
-      launchOptions.proxy = {
-        server: proxy
-      };
+      let proxyUrl: URL;
+      try {
+        proxyUrl = new URL(proxy);
+      } catch {
+        throw new Error("HTTP_PROXY/HTTPS_PROXY 必须是有效的 http 或 https URL");
+      }
+      if (proxyUrl.protocol !== "http:" && proxyUrl.protocol !== "https:") {
+        throw new Error("HTTP_PROXY/HTTPS_PROXY 仅支持 http 或 https 协议");
+      }
+      launchOptions.proxy = { server: proxyUrl.origin };
     }
 
     this.browser = await chromium.launch(launchOptions);

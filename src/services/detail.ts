@@ -4,6 +4,10 @@ import { getProjectIdByRegistrationNumber, searchTrials } from "./search.js";
 import { RequestOrchestrator } from "../runtime/orchestrator.js";
 import { ChallengeDetector } from "../runtime/challenge-detector.js";
 import { globalCacheManager } from "../runtime/cache-singleton.js";
+import {
+  isSidecarEnabled,
+  getTrialDetailViaSidecar,
+} from "../runtime/sidecar-client.js";
 
 const DETAIL_TTL_MS = 10 * 60 * 1000;
 
@@ -135,6 +139,16 @@ export async function getTrialDetail(
 
   // 构建URL
   const url = `https://www.chictr.org.cn/showproj.html?proj=${projectId}`;
+
+  // sidecar 优先：命中时完全不启动浏览器。失败则静默回退 Playwright。
+  if (isSidecarEnabled()) {
+    const viaSidecar = await getTrialDetailViaSidecar(projectId, registrationNumber);
+    if (viaSidecar && !isDetailEmpty(viaSidecar)) {
+      await globalCacheManager.set(cacheKey, viaSidecar, DETAIL_TTL_MS);
+      challengeDetector.recordSuccess();
+      return viaSidecar;
+    }
+  }
 
   return browserManager.withPage(async (page, sessionId) => {
     try {

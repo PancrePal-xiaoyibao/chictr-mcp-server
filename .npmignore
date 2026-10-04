@@ -1,0 +1,27 @@
+# 不随 npm 包发布的内容。
+#
+# 注意：package.json 的 "files" 已是白名单（dist / sidecar / README / LICENSE / CHANGELOG），
+# 但白名单只能限定顶层目录，无法排除目录内部的测试产物，因此这里补一条。
+
+# 编译出的测试文件：dist 是 tsc 的直接输出，测试也编译进去了。
+# 用户不需要它们，白白增大体积，也会让 `node --test` 之类误触。
+*.test.js
+*.test.js.map
+*.test.d.ts
+*.test.d.ts.map
+
+# Python 字节码缓存：随 Python 版本变化，跨机器复用可能出问题。
+**/__pycache__/**
+**/*.pyc
+**/*.pyo
+
+# 开发与验证用资料
+dev/**
+docs/**
+.venv/**
+.workbuddy/**
+
+# 源文件与构建配置：包内只发编译产物
+src/**
+tsconfig.json
+*.tgz

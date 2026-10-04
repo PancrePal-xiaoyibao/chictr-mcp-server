@@ -71,26 +71,42 @@ export class CacheManager {
       return undefined;
     }
 
-    const expired = Date.now() - row.created_at > row.ttl_ms;
-    if (expired) {
+    const remainingTtlMs = row.ttl_ms - (Date.now() - row.created_at);
+    if (remainingTtlMs <= 0) {
       this.db.prepare("DELETE FROM cache_entries WHERE key = ?").run(key);
       this.stats.l2Misses += 1;
       return undefined;
     }
 
-    const parsed = JSON.parse(row.value) as T;
-    this.l1.set(key, parsed, Math.ceil(row.ttl_ms / 1000));
-    this.stats.l2Hits += 1;
-    return parsed;
+    try {
+      const parsed = JSON.parse(row.value) as T;
+      this.l1.set(key, parsed, remainingTtlMs / 1000);
+      this.stats.l2Hits += 1;
+      return parsed;
+    } catch {
+      this.db.prepare("DELETE FROM cache_entries WHERE key = ?").run(key);
+      this.stats.l2Misses += 1;
+      return undefined;
+    }
   }
 
   async set<T>(key: string, value: T, ttlMs: number): Promise<void> {
-    this.l1.set(key, value, Math.ceil(ttlMs / 1000));
+    if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
+      throw new Error("Cache TTL must be a positive finite number");
+    }
+
+    this.cleanupExpired();
+    this.l1.set(key, value, ttlMs / 1000);
     this.db
       .prepare(
         "INSERT OR REPLACE INTO cache_entries (key, value, created_at, ttl_ms) VALUES (?, ?, ?, ?)"
       )
       .run(key, JSON.stringify(value), Date.now(), ttlMs);
+  }
+
+  close(): void {
+    this.l1.close();
+    this.db.close();
   }
 
   clearAll(): void {

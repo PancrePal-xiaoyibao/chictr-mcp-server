@@ -4,6 +4,10 @@ import NodeCache from "node-cache";
 import { RequestOrchestrator } from "../runtime/orchestrator.js";
 import { ChallengeDetector } from "../runtime/challenge-detector.js";
 import { globalCacheManager } from "../runtime/cache-singleton.js";
+import {
+  isSidecarEnabled,
+  searchTrialsViaSidecar,
+} from "../runtime/sidecar-client.js";
 
 const SEARCH_TTL_MS = 5 * 60 * 1000;
 // 创建项目ID映射缓存（注册号 -> 项目ID）
@@ -36,6 +40,27 @@ export async function searchTrials(
   }
   
   // console.log(`[CACHE MISS] 搜索缓存未命中，执行新请求: ${cacheKey}`);
+
+  // sidecar 优先：过盾成本由 Python 侧承担，命中时无需启动浏览器。
+  // 任何失败都静默回退到 Playwright，不改变对外契约。
+  if (isSidecarEnabled()) {
+    const viaSidecar = await searchTrialsViaSidecar({
+      keyword,
+      registrationNumber,
+      year,
+      maxResults,
+    });
+    if (viaSidecar) {
+      viaSidecar.results.forEach((result) => {
+        if (result.project_id) {
+          projectIdCache.set(result.registration_number, result.project_id);
+        }
+      });
+      await globalCacheManager.set(cacheKey, viaSidecar.results, SEARCH_TTL_MS);
+      challengeDetector.recordSuccess();
+      return viaSidecar.results;
+    }
+  }
 
   return browserManager.withPage(async (page, sessionId) => {
     // 默认年份：普通关键词搜索用当前年；按注册号精确搜索时不强制年份过滤
