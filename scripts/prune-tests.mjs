@@ -17,6 +17,7 @@ import { readdirSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 
 const DIST = path.resolve(process.cwd(), "dist");
+const SIDECAR = path.resolve(process.cwd(), "sidecar");
 
 /** 判断是否是测试产物：foo.test.js / foo.test.js.map / foo.test.d.ts / foo.test.d.ts.map */
 function isTestArtifact(name) {
@@ -59,6 +60,9 @@ function walk(dir) {
 }
 
 walk(DIST);
+// sidecar 目录同样要清：只要本地跑过一次 chictr_sidecar.py，Python 就会在这里
+// 生成 __pycache__，而它是随包发布的目录（files 里列了 sidecar），必须摘掉。
+walk(SIDECAR);
 
 if (removed > 0) {
   console.log(`[prepack] 已从发布包中排除 ${removed} 个测试/缓存文件`);
