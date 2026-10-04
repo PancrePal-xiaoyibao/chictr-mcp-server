@@ -11,7 +11,7 @@ The site protects `/searchproj.html` (search) and `/showproj.html` (detail) with
 two-stage architecture — a **Node MCP server plus a Python sidecar subprocess**. The sidecar solves
 the challenge once to obtain cookies, after which every request is plain HTTP.
 
-**Current version**: v3.0.1 · **MCP tools**: 10 · **Detail fields**: 76 · **Default data channel**: ChiCTR origin, direct
+**Current version**: v3.0.2 · **MCP tools**: 10 · **Detail fields**: 76 · **Default data channel**: ChiCTR origin, direct
 
 [简体中文](./README.md) | English
 
@@ -640,7 +640,7 @@ Other measured baselines:
 
 ## 🔔 Release notes
 
-### v3.0.1 (2026-10-04)
+### v3.0.2 (2026-10-04)
 - ✅ **Detail parser rewritten: fields 29 → 76, average 21.9 → 58.6 per record.** The root cause was that the old implementation flattened the whole page into a text blob and guessed field boundaries with regex, while the detail page is actually a **standard table** (the label lives in `<td class="left_title">` and the value in the immediately following `<td>`). Parsing by table structure stops English labels leaking into values and stops values running past neighbouring fields
 - ✅ **Fields that were previously missing entirely are now extracted**: contact person / phone / fax / email / address / postcode (separate sets for the applicant contact and the study leader), ethics committee contact / address / phone / email, study leader's institution, country / province / city / site / address, study phase, arm, biospecimen info, data sharing and safety monitoring
 - ✅ **Fixed silent loss of long fields caused by the 900-character cap**: `纳入标准` measured 2242 chars, `排除标准` 1410, `研究实施地点` 6964 — the old `(.{0,900}?)` regex simply failed to match, so the field vanished. Cap raised to 60000
