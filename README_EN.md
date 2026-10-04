@@ -11,7 +11,7 @@ The site protects `/searchproj.html` (search) and `/showproj.html` (detail) with
 two-stage architecture — a **Node MCP server plus a Python sidecar subprocess**. The sidecar solves
 the challenge once to obtain cookies, after which every request is plain HTTP.
 
-**Current version**: v3.0.0 · **MCP tools**: 10 · **Default data channel**: ChiCTR origin, direct
+**Current version**: v3.0.1 · **MCP tools**: 10 · **Detail fields**: 76 · **Default data channel**: ChiCTR origin, direct
 
 [简体中文](./README.md) | English
 
@@ -149,7 +149,7 @@ framework dependency:
 |---|---|---|---|
 | GET | `/health` | — | `{ok, solver:{fresh, age_seconds, solve_count, last_error, cookie_names}}` |
 | GET | `/search` | `title`, `regno`, `createyear`, `page`, `pages` | `{ok, source, query, total, total_pages, returned, pages_fetched, results[]}` |
-| GET | `/detail` | `proj` (project id) | `{ok, source, project_id, url, registration_number, fields{}, field_count}` |
+| GET | `/detail` | `proj` (project id), `raw` (`1`/`true`/`yes` to also return `raw_html`) | `{ok, source, project_id, url, registration_number, fields{}, field_count, raw_text, raw_text_length}` |
 
 Error semantics: still getting a challenge page after shield solving → **503
 `{"error":"challenge_unsolved"}`**; missing `proj` → 400; any other exception → 502. It listens on
@@ -382,7 +382,7 @@ service.**
 | Scenario | How to use it | Why it fits |
 |---|---|---|
 | **Clinical trial intelligence monitoring** | Schedule `search_trials` by target/disease keyword, then batch `get_trial_detail` for new registration numbers | The origin serves **live** data (WHO ICTRP syncs weekly and lags); at ~1.5s/page, daily polling costs next to nothing |
-| **RAG / knowledge-base ingestion** | `search_trials` for the list → `get_trial_detail` for 14+ structured fields → write into a vector store | Detail pages are parsed into **bilingual** structured fields, far better for chunking and retrieval than raw HTML |
+| **RAG / knowledge-base ingestion** | `search_trials` for the list → `get_trial_detail` for **55+ (up to 76) structured fields** → write into a vector store | Detail pages are parsed into **bilingual** structured fields, far better for chunking and retrieval than raw HTML; since v3.0.1 this includes eligibility criteria, contacts and ethics committee details |
 | **Patient matching and eligibility screening** | Search by disease name or gene mutation (e.g. `KRAS G12D`, `胰腺癌`), then filter against inclusion/exclusion criteria | `get_trial_detail` returns "inclusion criteria", "exclusion criteria", "study sites", and "recruitment status" directly |
 | **An evidence tool for AI agents** | Mount as an MCP server in Cherry Studio / Claude Desktop and similar clients | Chinese clinical trial data is a general gap for AI assistants; 5 of the 10 tools exist for agent self-diagnosis |
 | **Research retrospectives and trend analysis** | Query year by year with the `year` parameter and count registrations for a target or institution | Supports year, registration number, and keyword combinations, with a `max_results` cap of 100 |
@@ -392,7 +392,7 @@ service.**
 
 ## 📋 Available tools
 
-**10** MCP tools in total (`check_environment` was added in v3.0.0).
+**10** MCP tools in total (`check_environment` was added in v3.0.0; the tool count is unchanged — v3.0.1 expanded the field coverage of `get_trial_detail`).
 
 | # | Tool | Purpose |
 |---|---|---|
@@ -437,6 +437,38 @@ service.**
 ```json
 { "name": "get_trial_detail", "arguments": { "registration_number": "ChiCTR2500108082" } }
 ```
+
+Returns the **full structured field set** of a detail page. Since v3.0.1 the parser extracts fields
+by HTML table structure, lifting the field count from 29 to **76** and the average from 21.9 to
+**58.6 fields per record** (measured across 468 real pages). Every value was verified back against the
+raw HTML (**all 28,809 populated field values across the corpus, 0 mismatches, 0 fabricated**).
+
+Main field groups:
+
+| Group | Fields |
+|---|---|
+| Registration | `注册号` `注册号状态` `注册时间` `最近更新日期` `注册题目` `研究课题的正式科学名称` `研究课题代号(代码)` `在二级注册机构或其它机构的注册号` |
+| **Contacts** | `申请注册联系人` `申请注册联系人电话` `申请注册联系人传真` `申请注册联系人电子邮件` `申请注册联系人通讯地址` `申请注册联系人邮政编码`, plus the same six fields for `研究负责人` |
+| **Ethics committee** | `是否获伦理委员会批准` `伦理委员会批件文号` `批准本研究的伦理委员会名称` `伦理委员会批准日期` `伦理委员会联系人` `伦理委员会联系地址` `伦理委员会联系人电话` `伦理委员会联系人邮箱` |
+| Sites & funding | `申请人所在单位` `研究负责人所在单位` `研究实施负责（组长）单位` `经费或物资来源` `国家` `省(直辖市)` `市(区县)` `单位(医院)` `具体地址` `单位级别` |
+| Design & purpose | `研究类型` `研究所处阶段` `研究设计` `研究目的` `药物成份或治疗方案详述` `研究实施时间` `征募观察对象时间` |
+| Intervention & sample | `干预措施` `组别` `样本量` `干预措施代码` |
+| Outcomes | `指标中文名` `指标类型` `测量时间点` `测量方法` `主要终点` `次要终点` |
+| Recruitment & sharing | `征募研究对象情况` `年龄范围` `性别` `随机方法` `盲法` `是否公开试验完成后的统计结果` `是否共享原始数据` `共享原始数据的方式（说明` `数据采集和管理（说明` `数据与安全监察委员会` `注册人` |
+| Biospecimen | `采集人体标本` `标本中文名` `标本去向` |
+
+> **37 fields reach 100% coverage** across all 468 records: `注册号` `注册号状态` `注册时间`
+> `最近更新日期` `注册题目` `研究课题的正式科学名称` `研究疾病` `研究类型` `研究设计` `研究目的`
+> `研究所处阶段` `研究实施时间` `征募观察对象时间` `征募研究对象情况`
+> `随机方法（请说明由何人用什么方法产生随机序列）` `年龄范围` `性别` `指标中文名` `指标类型` `说明`
+> `是否获伦理委员会批准` `是否公开试验完成后的统计结果` `申请人所在单位` `申请注册联系人`
+> `申请注册联系人电话` `申请注册联系人电子邮件` `申请注册联系人通讯地址` `研究负责人`
+> `研究负责人电话` `研究负责人电子邮件` `研究负责人通讯地址` `研究实施负责（组长）单位`
+> `研究实施负责（组长）单位地址` `经费或物资来源` `注册人` `纳入标准` `排除标准`.
+>
+> Coverage differences reflect pages that legitimately leave a field blank, not parsing failures:
+> `次要研究终点` 1/468, `研究疾病代码` 5/468, `研究负责人网址(自愿提供)` 6/468,
+> `干预措施代码` 7/468 and `测量方法` 60/468 were all spot-checked and confirmed blank upstream.
 
 ### check_environment
 
@@ -608,6 +640,19 @@ Other measured baselines:
 
 ## 🔔 Release notes
 
+### v3.0.1 (2026-10-04)
+- ✅ **Detail parser rewritten: fields 29 → 76, average 21.9 → 58.6 per record.** The root cause was that the old implementation flattened the whole page into a text blob and guessed field boundaries with regex, while the detail page is actually a **standard table** (the label lives in `<td class="left_title">` and the value in the immediately following `<td>`). Parsing by table structure stops English labels leaking into values and stops values running past neighbouring fields
+- ✅ **Fields that were previously missing entirely are now extracted**: contact person / phone / fax / email / address / postcode (separate sets for the applicant contact and the study leader), ethics committee contact / address / phone / email, study leader's institution, country / province / city / site / address, study phase, arm, biospecimen info, data sharing and safety monitoring
+- ✅ **Fixed silent loss of long fields caused by the 900-character cap**: `纳入标准` measured 2242 chars, `排除标准` 1410, `研究实施地点` 6964 — the old `(.{0,900}?)` regex simply failed to match, so the field vanished. Cap raised to 60000
+- ✅ **Fixed legacy registration numbers not matching**: pre-2018 numbers look like `ChiCTR-IIR-17013424`, which the old `ChiCTR\d{6,}` regex missed. Now `ChiCTR(?:-[A-Z]{2,4})?-?\d{4,}`
+- ✅ **Fixed section headers being captured as fields**: `测量指标` / `采集人体标本` / `研究实施地点` / `申办者` / `干预措施` keep their content in nested sub-tables, so naive pairing yielded junk such as `'组别'`, `'国家'`, `'Outcomes'`
+- ✅ **Fixed blank fields being fabricated by the regex fallback**: fields left empty on the page (e.g. `研究课题代号(代码)`) picked up the next label from the flattened text, producing fake values like `'Study subject ID'`
+- ✅ **Fixed undecoded HTML entities**: some cells use literal `&#32;` / `&#39;`, which made `具体地址` land as `'上海市&#32;普陀区…'`
+- ✅ **Fixed nav-bar label collisions**: the header's "按经费或物资来源统计" appears earlier than the real body field (offset 141 vs 3364); the body start is now anchored after `注册号：`
+- ✅ **Fixed bleeding inside composite outcome blocks**: `主要终点` used to swallow subsequent sub-labels (`Measure time point of outcome： …`)
+- ✅ Verification: every field of 468 real pages was checked back against the raw HTML — **all 28,809 populated field values across the corpus showed 0 mismatches and 0 fabricated values**; full recrawl succeeded 468/468
+- ℹ️ Added `tools/chictr_crawl.py` (local bulk-crawl script, **not shipped in the npm package**): year-bucketed ingestion, structured fields + raw HTML stored together, dedup by registration number, idempotent resumption, JSON/HTML export
+
 ### v3.0.0 (2026-04-10)
 - ✅ Added the Python sidecar channel: solves the Alibaba Shield challenge once with `curl_cffi` +
   `patchright`, then reuses the cookie over plain HTTP (**~1.5s/page** instead of 5–10s per page plus
@@ -668,11 +713,7 @@ Other measured baselines:
 
 Recorded honestly; unresolved or unverified items:
 
-1. **The Node-side Playwright fallback path is unusable on this machine**: Node playwright 1.62.1
-   needs `chromium-1234`, while the cache only has `chromium-1243` (used by Python-side patchright).
-   Today this is masked only because the sidecar plain HTTP path is used; if the sidecar fails and
-   falls back to Playwright, it throws `Executable doesn't exist`.
-   **Recommendation: treat the sidecar as the only path, or install the Node-side browser binaries.**
+1. **The Node-side Playwright fallback is unusable here, and installing its browser binaries would not help**: Node playwright 1.62.1 needs `chromium-1234`, while the cache only has `chromium-1243` (used by Python-side patchright). **The real reason the fallback fails is that vanilla Playwright cannot pass Alibaba Shield at all — the missing binary is not the bottleneck.** The "real Chromium hangs too" result recorded in `dev/browser-removal/WAF_RESEARCH.md` was obtained with vanilla Playwright + `page.setContent()`; what does pass the shield is patchright (anti-detection patch) driving a real navigation. So **installing the Node-side binaries is not recommended** (roughly 359MB for a path that would still fail, plus two conflicting Chromium revisions). Treat the sidecar as the only path. The ❌ shown by `doctor` for this item is expected and does not affect the exit code (`src/runtime/env-probe.ts:391` documents Playwright as an "optional fallback, not a failure").
 2. **Cookie expiry boundary**: measured lifetime is about 37.5 minutes < the configured 55-minute TTL.
    Recovery relies on content detection plus a retry (measured at 5.7s), but the TTL is only an
    optimistic early-refresh signal.
@@ -682,8 +723,9 @@ Recorded honestly; unresolved or unverified items:
 4. **Long-running stability unverified**: the stability of `StealthySession` over long periods has not
    been tested (currently a new browser context is created and torn down for each shield solve).
 5. **Request rate ceiling untested**: whether Alibaba Shield intervenes again at higher QPS is unknown.
-6. **Slight field bleed in `研究实施时间`**: the value contains the next label. This is a known parsing
-   blemish and does not affect the main fields.
+6. **`研究实施时间` carries bilingual label noise**: the value looks like `'从 \n From \n 2024-01-01
+   00:00:00 至 \n To \n 2027-01-01 00:00:00'` — the Chinese/English labels sit inside the value. It no
+   longer bleeds into the next field, but you may want to strip the `From`/`To` markers yourself.
 7. **The ICTRP dual channel is not implemented**: `dev/browser-removal/DUAL_CHANNEL_ARCHITECTURE.md` is
    a design document; there is currently **no** WHO ICTRP channel and no `source=` parameter.
 8. **Verification codes cannot be handled manually in headless mode**: frequent requests may still

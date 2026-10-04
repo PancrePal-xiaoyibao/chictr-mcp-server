@@ -38,3 +38,9 @@ venv/
 
 # 含真实会话 cookie 的抓包样本，仅本地保留
 dev/ictrp-notes/
+
+# 本地抓取产物（胰腺癌数据集，约 243MB：SQLite + JSON + 468 个原始 HTML）
+data/
+
+# 数据生成用的 sidecar 离线自测脚本（与 tools/chictr_crawl.py 配套）
+tools/__pycache__/
