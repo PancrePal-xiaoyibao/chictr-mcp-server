@@ -564,6 +564,49 @@ npm scripts 等价入口：`npm run doctor` / `npm run setup` / `npm run sidecar
 
 ---
 
+## 🗄️ 批量抓取入库（`tools/chictr_crawl.py`）
+
+需要**把某个疾病的全量试验落成本地数据**时用这个脚本。它随包分发
+（`node_modules/chictr-mcp-server/tools/chictr_crawl.py`），只走 sidecar，
+不碰浏览器与 TLS 指纹，因此**必须先让 sidecar 跑起来**。
+
+```bash
+# 1) 起 sidecar（另开一个终端，保持前台运行）
+npx chictr-mcp-server sidecar
+
+# 2) 先预览规模（只拉列表，不抓详情）
+python3 node_modules/chictr-mcp-server/tools/chictr_crawl.py --keyword 胰腺癌 --list-years
+
+# 3) 正式抓取 → SQLite（结构化字段 + 原始 HTML 双存）
+python3 node_modules/chictr-mcp-server/tools/chictr_crawl.py --keyword 胰腺癌
+
+# 4) 导出（JSON 不含原始 HTML；HTML 单独落盘便于核对原文）
+python3 node_modules/chictr-mcp-server/tools/chictr_crawl.py --keyword 胰腺癌 --export-json
+python3 node_modules/chictr-mcp-server/tools/chictr_crawl.py --keyword 胰腺癌 --export-html
+```
+
+| 参数 | 说明 |
+|---|---|
+| `--keyword` | 检索关键词，默认 `胰腺癌`。默认库文件按关键词派生为 `data/chictr_<关键词>.db`，换关键词不会覆盖 |
+| `--years` | 只抓指定年份，如 `--years 2026 2025`；默认 2010 – 今年 |
+| `--list-years` | 只统计各年条数并估算耗时，不抓详情 |
+| `--delay` | 请求间隔秒，默认 0.6 |
+| `--refresh` | 强制重抓已存在的记录（默认跳过） |
+| `--db` / `--json` / `--html-dir` | 自定义输出路径 |
+| `--export-json` / `--export-html` | 导出 JSON / 独立 HTML 文件 + `_manifest.json` |
+
+**增量行为**：去重键是 `project_id`（不是注册号）——2018 年前注册的试验
+ChiCTR 没发注册号（列表里该字段为 `null`），只按注册号去重会把 2010–2017
+的记录整批丢掉（实测少 31 条）。重跑脚本只补缺失项，已抓过的直接跳过，
+因此**定时重跑即是增量同步**。
+
+**存储结构**：主表 `trials` 以 `project_id` 为主键，除全字段 JSON
+（`fields_json`）与原始素材（`raw_html` / `raw_text`）外，另把
+`研究设计`/`研究疾病`/`纳入标准`/`排除标准`/`研究负责人` 等映射为独立列并建索引，
+方便直接 SQL 过滤。
+
+---
+
 ## 📈 性能对比
 
 | 路径 | 搜索耗时 | 说明 |
@@ -617,7 +660,10 @@ npm scripts 等价入口：`npm run doctor` / `npm run setup` / `npm run sidecar
 - ✅ **修复导航栏同名标签误匹配**：页面顶部「按经费或物资来源统计」早于正文真实字段（偏移 141 vs 3364），正文起点现定位到「注册号：」之后
 - ✅ **修复复合结局指标块串味**：`主要终点` 旧值会吞掉后续子标签（`Measure time point of outcome： …`）
 - ✅ 校验：对 468 个真实页面逐字段回查 HTML 原文，**全库 28809 个字段值 0 处不符、0 处伪造值**；重抓 468/468 成功
-- ℹ️ 新增 `tools/chictr_crawl.py`（本地批量抓取脚本，**不在 npm 包内**）：按注册年份分档入库、结构化字段 + 原始 HTML 双存、按注册号去重、幂等续跑、JSON/HTML 导出
+- ✅ 修复**「纳入标准」「排除标准」整字段丢失**（发布后复查发现，影响全部记录）：两个标签从未进入字段白名单，结构解析直接跳过——尽管单元格配对本身正确。实测覆盖率 0/468，修复后 468/468
+- ✅ 修复**`_TAG_RE` 吞掉正文中的小于号**：旧正则 `r"<[^>]+>"` 把 `'转导效率<10%…'` 里的 `<10%` 当成标签起点，一路删到后面某个 `>`，导致 9 条记录正文被静默抹掉。收紧为 `r"</?[A-Za-z!][^>]*>"`
+- ✅ 修复**英文行空值覆盖中文行真实值**：同一标签在页面出现两次（中文行 + 英文行），英文行值为空，旧代码的无条件赋值会覆盖中文行的真实值
+- ✅ **`tools/chictr_crawl.py` 随包分发**（`npm install` 后位于 `node_modules/chictr-mcp-server/tools/`）：批量抓取入库脚本，支持 `--keyword` 换关键词、`--list-years` 预览规模、`--export-json`/`--export-html` 导出、按 `project_id` 去重、幂等续跑
 
 ### v3.0.0 (2026-04-10)
 - ✅ **新增 Python sidecar 通道**：用 Scrapling（curl_cffi TLS 指纹 + patchright 反检测内核）过一次阿里盾挑战拿到 cookie，之后全程纯 HTTP。搜索从「每页 5–10s」降到 **~1.5s**，详情 ~2s

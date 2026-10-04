@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""胰腺癌 ChiCTR 试验全量抓取 → SQLite（结构化字段 + 原始 HTML）。
+"""ChiCTR 临床试验全量抓取 → SQLite（结构化字段 + 原始 HTML）。
+
+默认按「胰腺癌」检索；用 --keyword 可换成任意疾病/关键词。默认库文件为
+数据目录下的 chictr_<关键词>.db，因此对不同关键词跑不会互相覆盖。
 
 设计要点
 --------
 1. **只走 sidecar**（HTTP 127.0.0.1:8848）。sidecar 负责阿里盾过盾，
-   本脚本不碰浏览器、不碰 TLS 指纹。
+   本脚本不碰浏览器、不碰 TLS 指纹。运行前请确保 sidecar 已启动：
+       chictr-mcp-server sidecar      # 或本仓库：python3 sidecar/chictr_sidecar.py
 2. **按注册年份分档**抓取（createyear 参数），逐年翻页，便于断点续跑
    与增量控制。
 3. **按 project_id 去重**：project_id 是 ChiCTR 的天然唯一键，且**每条都有**。
@@ -18,10 +22,13 @@
 
 用法
 ----
-    python3 tools/chictr_crawl.py                  # 全量抓取（跳过已存在）
-    python3 tools/chictr_crawl.py --years 2026     # 只抓某年
-    python3 tools/chictr_crawl.py --refresh        # 强制重抓已存在的
-    python3 tools/chictr_crawl.py --export-json    # 额外导出 JSON
+    python3 chictr_crawl.py                     # 胰腺癌全量抓取（跳过已存在）
+    python3 chictr_crawl.py --keyword 胃癌       # 换成别的关键词
+    python3 chictr_crawl.py --years 2026        # 只抓某年
+    python3 chictr_crawl.py --refresh           # 强制重抓已存在的
+    python3 chictr_crawl.py --export-json       # 额外导出 JSON
+    python3 chictr_crawl.py --list-years        # 只看各年条数，不抓详情
+    python3 chictr_crawl.py --export-html       # 把库里的原始 HTML 导成独立文件
 """
 
 from __future__ import annotations
@@ -30,6 +37,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import sys
 import time
@@ -40,13 +48,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_DB = ROOT / "data" / "chictr_pancreatic.db"
-DEFAULT_JSON = ROOT / "data" / "pancreatic_trials.json"
-
 SIDECAR = os.environ.get("CHICTR_SIDECAR_URL", "http://127.0.0.1:8848")
 KEYWORD = "胰腺癌"
 # 注册年份分档：ChiCTR 最早数据在 2010 年前后，覆盖到当年。
 DEFAULT_YEARS = list(range(2010, datetime.now().year + 1))
+
+
+def default_db(keyword: str) -> Path:
+    """按关键词给默认库文件名，换关键词跑不会覆盖上一份数据。
+
+    关键词可能含 `/`、空格等不适合做文件名的字符，统一替换为下划线。
+    """
+    safe = re.sub(r"[^\w\u4e00-\u9fa5-]+", "_", keyword).strip("_") or "chictr"
+    return ROOT / "data" / f"chictr_{safe}.db"
+
+
+def default_json(keyword: str) -> Path:
+    return default_db(keyword).with_suffix(".json")
+
 
 # sidecar 单次请求超时；详情页较大（~250KB HTML），给足时间。
 HTTP_TIMEOUT = 120
@@ -294,6 +313,78 @@ def log_event(conn: sqlite3.Connection, event: str, year: int | None, detail: st
 # ---------------------------------------------------------------------------
 
 
+def list_years(args: argparse.Namespace) -> int:
+    """只逐年拉列表统计条数，不抓详情——用来在正式抓取前预览规模与耗时。"""
+    keyword = args.keyword or KEYWORD
+    years = [int(y) for y in args.years] if args.years else DEFAULT_YEARS
+    print(f"关键词：{keyword} | sidecar：{SIDECAR}")
+    print(f"年份：{years[0]}–{years[-1]}（{len(years)} 档）\n")
+
+    total = 0
+    for year in years:
+        try:
+            rows = search_year(year, delay=args.delay, keyword=keyword)
+        except SidecarError as exc:
+            print(f"  {year}: ❌ {exc}")
+            continue
+        total += len(rows)
+        print(f"  {year}: {len(rows)} 条")
+        time.sleep(args.delay)
+
+    print(f"\n合计：{total} 条")
+    # sidecar 约 1.4s/条（含过盾摊薄），据此给个粗略耗时估计
+    print(f"预计抓取耗时：约 {total * 1.5 / 60:.0f} 分钟（按 1.5s/条估算）")
+    return 0
+
+
+def export_html(args: argparse.Namespace) -> int:
+    """把库里的原始 HTML 导出为独立文件 + manifest。
+
+    与 export_json 的区别：JSON 剔除 raw_html 控制体积，HTML 单独落盘，
+    便于直接用浏览器打开核对原文。
+    """
+    db_path = Path(args.db)
+    out = Path(args.html_dir or (db_path.parent / "html"))
+    out.mkdir(parents=True, exist_ok=True)
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT project_id, registration_number, title, registration_year, "
+        "detail_url, raw_html, html_sha256 FROM trials"
+    ).fetchall()
+
+    # 先清掉旧的 .html，避免解析器/命名规则变更后留下同名重复或孤儿文件
+    for p in out.glob("*.html"):
+        p.unlink()
+
+    manifest = []
+    for r in rows:
+        name = (r["registration_number"] or f"proj_{r['project_id']}") + ".html"
+        # 必须按字节写：ChiCTR 页面用 CRLF，如果走文本模式（newline 默认）
+        # 换行会被翻译成 \n，落盘内容与库里的 html_sha256 就对不上了。
+        blob = (r["raw_html"] or "").encode("utf-8")
+        (out / name).write_bytes(blob)
+        manifest.append({
+            "file": name,
+            "registration_number": r["registration_number"],
+            "project_id": r["project_id"],
+            "title": r["title"],
+            "year": r["registration_year"],
+            "url": r["detail_url"],
+            "bytes": len(blob),
+            "sha256": hashlib.sha256(blob).hexdigest(),
+        })
+
+    (out / "_manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8"
+    )
+    size = sum(p.stat().st_size for p in out.glob("*.html"))
+    print(f"导出 {len(manifest)} 个 HTML → {out}（{size/1024/1024:.1f} MB）")
+    conn.close()
+    return 0
+
+
 def crawl(args: argparse.Namespace) -> int:
     db_path = Path(args.db).expanduser().resolve()
     conn = open_db(db_path)
@@ -448,16 +539,33 @@ def export_json(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="胰腺癌 ChiCTR 全量抓取 → SQLite")
-    ap.add_argument("--db", default=str(DEFAULT_DB))
-    ap.add_argument("--json", default=str(DEFAULT_JSON))
+    ap = argparse.ArgumentParser(description="ChiCTR 临床试验全量抓取 → SQLite")
+    ap.add_argument("--db", help="SQLite 路径（默认 data/chictr_<关键词>.db）")
+    ap.add_argument("--json", help="JSON 导出路径（默认与 --db 同名 .json）")
     ap.add_argument("--years", nargs="*", help="只抓这些年份，默认 2010–今年")
     ap.add_argument("--delay", type=float, default=0.6, help="请求间隔秒（默认 0.6）")
     ap.add_argument("--keyword", default=KEYWORD, help=f"检索关键词（默认 {KEYWORD}）")
     ap.add_argument("--refresh", action="store_true", help="强制重抓已存在的注册号")
     ap.add_argument("--export-json", action="store_true", help="抓完后导出 JSON")
+    ap.add_argument(
+        "--list-years", action="store_true",
+        help="只统计各年条数（不抓详情），用来预览规模",
+    )
+    ap.add_argument(
+        "--export-html", action="store_true",
+        help="把库里的原始 HTML 导出为独立文件 + manifest",
+    )
+    ap.add_argument("--html-dir", help="HTML 导出目录（默认 <db 同目录>/html）")
     args = ap.parse_args()
 
+    # 默认路径按关键词派生，避免不同关键词互相覆盖
+    args.db = args.db or str(default_db(args.keyword))
+    args.json = args.json or str(default_json(args.keyword))
+
+    if args.export_html:
+        return export_html(args)
+    if args.list_years:
+        return list_years(args)
     rc = crawl(args)
     if rc == 0 and args.export_json:
         export_json(args)

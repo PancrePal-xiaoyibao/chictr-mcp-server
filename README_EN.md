@@ -597,6 +597,52 @@ Equivalent npm scripts: `npm run doctor` / `npm run setup` / `npm run sidecar`.
 
 ---
 
+## 🗄️ Bulk crawl into a local database (`tools/chictr_crawl.py`)
+
+Use this when you need the **full set of trials for a disease** stored locally.
+It ships with the package (`node_modules/chictr-mcp-server/tools/chictr_crawl.py`),
+talks only to the sidecar — no browser, no TLS fingerprinting — so the
+**sidecar must already be running**.
+
+```bash
+# 1) start the sidecar (separate terminal, keep it in the foreground)
+npx chictr-mcp-server sidecar
+
+# 2) preview the scale first (list only, no detail fetches)
+python3 node_modules/chictr-mcp-server/tools/chictr_crawl.py --keyword 胰腺癌 --list-years
+
+# 3) crawl into SQLite (structured fields + raw HTML, both stored)
+python3 node_modules/chictr-mcp-server/tools/chictr_crawl.py --keyword 胰腺癌
+
+# 4) export (JSON without raw HTML; HTML written as standalone files)
+python3 node_modules/chictr-mcp-server/tools/chictr_crawl.py --keyword 胰腺癌 --export-json
+python3 node_modules/chictr-mcp-server/tools/chictr_crawl.py --keyword 胰腺癌 --export-html
+```
+
+| Flag | Meaning |
+|---|---|
+| `--keyword` | Search keyword, defaults to `胰腺癌`. The default DB path is derived as `data/chictr_<keyword>.db`, so different keywords never overwrite each other |
+| `--years` | Restrict to given years, e.g. `--years 2026 2025`; defaults to 2010 – current year |
+| `--list-years` | Count rows per year and estimate runtime, without fetching details |
+| `--delay` | Delay between requests in seconds, default 0.6 |
+| `--refresh` | Re-fetch records that already exist (skipped by default) |
+| `--db` / `--json` / `--html-dir` | Custom output paths |
+| `--export-json` / `--export-html` | Export JSON / standalone HTML files plus `_manifest.json` |
+
+**Incremental behaviour**: deduplication keys on `project_id`, not the
+registration number — trials registered before 2018 have no ChiCTR number
+(the field is `null` in listings), so keying on it would silently drop every
+2010–2017 record (31 records in practice). Re-running the script only fills in
+what is missing and skips what is already stored, so a scheduled re-run *is*
+the incremental sync.
+
+**Storage layout**: the `trials` table is keyed by `project_id`. Besides the
+full field JSON (`fields_json`) and raw material (`raw_html` / `raw_text`), it
+maps `研究设计`/`研究疾病`/`纳入标准`/`排除标准`/`研究负责人` and others onto
+indexed columns for direct SQL filtering.
+
+---
+
 ## 📈 Performance comparison
 
 | Path | Search latency | Notes |
@@ -651,7 +697,10 @@ Other measured baselines:
 - ✅ **Fixed nav-bar label collisions**: the header's "按经费或物资来源统计" appears earlier than the real body field (offset 141 vs 3364); the body start is now anchored after `注册号：`
 - ✅ **Fixed bleeding inside composite outcome blocks**: `主要终点` used to swallow subsequent sub-labels (`Measure time point of outcome： …`)
 - ✅ Verification: every field of 468 real pages was checked back against the raw HTML — **all 28,809 populated field values across the corpus showed 0 mismatches and 0 fabricated values**; full recrawl succeeded 468/468
-- ℹ️ Added `tools/chictr_crawl.py` (local bulk-crawl script, **not shipped in the npm package**): year-bucketed ingestion, structured fields + raw HTML stored together, dedup by registration number, idempotent resumption, JSON/HTML export
+- ✅ Fixed **whole-field loss of `纳入标准` / `排除标准`** (found in a post-release review, affecting every record): neither label was ever in the field whitelist, so structural parsing skipped them outright — even though the cell pairing itself was correct. Measured coverage was 0/468; now 468/468
+- ✅ Fixed **`_TAG_RE` swallowing less-than signs in body text**: the old `r"<[^>]+>"` treated `<10%` in `'转导效率<10%…'` as the start of a tag and deleted everything up to a later `>`, silently wiping body text from 9 records. Tightened to `r"</?[A-Za-z!][^>]*>"`
+- ✅ Fixed **English rows overwriting real Chinese-row values**: the same label appears twice on the page (Chinese row + English row) and the English row's value is empty; the old unconditional assignment clobbered the real value
+- ✅ **`tools/chictr_crawl.py` now ships with the package** (after `npm install` it lives at `node_modules/chictr-mcp-server/tools/`): bulk crawl into SQLite, with `--keyword` to change the disease, `--list-years` to preview scale, `--export-json` / `--export-html` to export, dedup by `project_id`, and idempotent resumption
 
 ### v3.0.0 (2026-04-10)
 - ✅ Added the Python sidecar channel: solves the Alibaba Shield challenge once with `curl_cffi` +

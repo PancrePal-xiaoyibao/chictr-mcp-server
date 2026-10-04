@@ -18,6 +18,7 @@ import path from "node:path";
 
 const DIST = path.resolve(process.cwd(), "dist");
 const SIDECAR = path.resolve(process.cwd(), "sidecar");
+const TOOLS = path.resolve(process.cwd(), "tools");
 
 /** 判断是否是测试产物：foo.test.js / foo.test.js.map / foo.test.d.ts / foo.test.d.ts.map */
 function isTestArtifact(name) {
@@ -43,6 +44,12 @@ function walk(dir) {
         removed += 1;
         continue;
       }
+      // tools/data 若存在（本地跑过抓取脚本），也是发布包里不该有的抓取产物
+      if (entry.name === "data" && dir === TOOLS) {
+        rmSync(full, { recursive: true, force: true });
+        removed += 1;
+        continue;
+      }
       walk(full);
       continue;
     }
@@ -63,6 +70,9 @@ walk(DIST);
 // sidecar 目录同样要清：只要本地跑过一次 chictr_sidecar.py，Python 就会在这里
 // 生成 __pycache__，而它是随包发布的目录（files 里列了 sidecar），必须摘掉。
 walk(SIDECAR);
+// tools/ 也随包发布（内置的批量抓取入库脚本），同样会生成 __pycache__；
+// 另外 data/ 若被误放到 tools 下也应排除，避免把抓取产物打进包里。
+walk(TOOLS);
 
 if (removed > 0) {
   console.log(`[prepack] 已从发布包中排除 ${removed} 个测试/缓存文件`);
