@@ -213,7 +213,8 @@ def parse_search(html: str) -> dict[str, Any]:
         tds = re.findall(r"<td[^>]*>(.*?)</td>", row, re.S | re.I)
         flat = [_clean(_TAG_RE.sub(" ", td)) for td in tds]
 
-        regno = next((c for c in flat if re.match(r"^ChiCTR\d+", c)), None)
+        # 注册号有两种形态：新式 ChiCTR2300077564，老式 ChiCTR-IIR-17013424
+        regno = next((c for c in flat if REGNO_RE.match(c)), None)
 
         # 题目取 <a> 的 title 属性（最干净），退回 <a> 内文本
         title = None
@@ -252,14 +253,67 @@ def parse_search(html: str) -> dict[str, Any]:
     }
 
 
-# 详情页常见字段（中英并列，实测标签）
+# 注册号有两种形态：
+#   新式（2018 起）  ChiCTR2300077564
+#   老式（2018 前）  ChiCTR-IIR-17013424 / ChiCTR-IPR-... / ChiCTR-ONC-... 等
+# 老式编号只出现在详情页，搜索结果列表里 registration_number 为 null。
+REGNO_RE = re.compile(r"ChiCTR(?:-[A-Z]{2,4})?-?\d{4,}")
+
+# 详情页字段标签。
+# 这份清单是对 468 个真实详情页做标签聚合后得到的（每条记录出现一次的
+# 高频标签即页面固定表单字段），不再靠人工猜测——早期版本只列了 29 个，
+# 导致联络人/电话/邮箱/伦理委员会联系方式等大量字段根本没被抽取。
 DETAIL_LABELS = [
-    "注册号", "注册时间", "最近更新日期", "注册号状态", "注册题目",
-    "研究疾病", "研究类型", "研究分期", "研究设计", "干预措施",
-    "主要研究目的", "次要研究目的", "纳入标准", "排除标准", "研究实施时间",
-    "申办者", "主要研究者", "研究负责人", "伦理委员会", "样本量",
-    "目标样本量", "招募状态", "注册机构", "研究实施地点", "经费来源",
+    # ---- 注册信息 ----
+    "注册号", "注册号状态", "注册时间", "最近更新日期",
+    "注册题目", "注册题目简写", "研究课题的正式科学名称", "研究课题代号(代码)",
+    "在二级注册机构或其它机构的注册号",
+    # ---- 联系人（申请注册联系人 / 研究负责人 各一套）----
+    "申请注册联系人", "申请注册联系人电话", "申请注册联系人传真",
+    "申请注册联系人电子邮件", "申请注册联系人通讯地址", "申请注册联系人邮政编码",
+    "研究负责人", "研究负责人电话", "研究负责人传真", "研究负责人电子邮件",
+    "研究负责人通讯地址", "研究负责人邮政编码",
+    "申请单位网址(自愿提供)", "研究负责人网址(自愿提供)",
+    "申请人所在单位", "研究负责人所在单位",
+    # ---- 伦理委员会 ----
+    "是否获伦理委员会批准", "伦理委员会批件文号", "伦理委员会批件附件",
+    "批准本研究的伦理委员会名称", "伦理委员会批准日期", "伦理委员会联系人",
+    "伦理委员会联系地址", "伦理委员会联系人电话", "伦理委员会联系人邮箱",
+    # ---- 单位与来源 ----
+    "研究实施负责（组长）单位", "研究实施负责（组长）单位地址",
+    "试验主办单位(项目批准或申办者)", "申办者",
+    "经费或物资来源", "研究经费来源", "研究疾病", "研究疾病代码",
+    # ---- 设计与目的 ----
+    "研究类型", "研究所处阶段", "研究设计", "研究目的",
+    "药物成份或治疗方案详述", "研究实施时间", "征募观察对象时间",
+    # ---- 干预与样本 ----
+    "干预措施", "组别", "样本量", "干预措施代码",
+    "研究实施地点", "单位级别", "国家", "省(直辖市)", "市(区县)",
+    "单位(医院)", "具体地址",
+    # ---- 结局指标（复合块）----
+    "测量指标", "指标中文名", "指标类型", "测量时间点", "测量方法",
+    "主要终点", "次要终点", "主要研究终点", "次要研究终点",
+    # ---- 标本 ----
+    "采集人体标本", "标本中文名", "标本去向", "说明",
+    # ---- 招募与共享 ----
+    "征募研究对象情况", "年龄范围", "性别",
+    "随机方法（请说明由何人用什么方法产生随机序列）",
+    "是否公开试验完成后的统计结果", "盲法", "是否共享原始数据",
+    "共享原始数据的方式（说明", "数据采集和管理（说明",
+    "数据与安全监察委员会", "注册人",
 ]
+
+# 这几个是**区块标题**而非字段：它们的值单元格里放的是嵌套子表格，
+# 「标题行 + 下一行标签」的朴素配对会把子表格里的第一个标签当成它们的值。
+# 因此不抽取它们本身，只把子表格里的真实字段抽出来。
+SECTION_ONLY_LABELS = {
+    "测量指标", "采集人体标本", "试验主办单位(项目批准或申办者)",
+    "研究实施地点", "申办者", "干预措施",
+}
+
+# 标签在 HTML 纯文本化后可能带上的尾部噪音（如 "申办者)"、"申请人所在单位"），
+# 匹配时允许标签与冒号之间夹这些字符。
+_LABEL_TAIL_NOISE = r"[)\s（(）]*"
 
 # 详情页在中文字段后紧跟英文标签（同一行中英对照），这些英文串同样构成
 # 字段边界，否则「注册题目」会把后面的 Public title 一并吞掉。
@@ -275,37 +329,148 @@ DETAIL_LABELS_EN = [
 ]
 
 # 所有字段边界（中+英），用于值截断的前瞻断言。
-_ALL_BOUNDARIES = DETAIL_LABELS + DETAIL_LABELS_EN
+# 除字段名本身，还有些**子标签**只出现在复合块内部，不单独作为字段抽取，
+# 但必须能终止前一个字段。实测「结局指标」块形态：
+#   结局指标： 指标中文名： 手术转化率 指标类型： 主要指标 Outcome： … 测量方法： 主要终点： …
+# 若不把它们计入边界，前一个字段的值会一路吞掉后面的子标签与内容。
+_SUB_BOUNDARIES = [
+    "指标中文名", "指标类型", "测量时间点", "测量方法", "评估时间节点",
+    "Measure time point of outcome", "Assessment time points", "Measure method",
+    "Outcome", "Type", "Primary indicator", "Secondary indicator",
+]
+_ALL_BOUNDARIES = DETAIL_LABELS + DETAIL_LABELS_EN + _SUB_BOUNDARIES
 _BOUNDARY_RE = "|".join(re.escape(x) for x in sorted(_ALL_BOUNDARIES, key=len, reverse=True))
 _EN_BOUNDARY_RE = "|".join(
-    re.escape(x) for x in sorted(DETAIL_LABELS_EN, key=len, reverse=True)
+    re.escape(x) for x in sorted(DETAIL_LABELS_EN + _SUB_BOUNDARIES, key=len, reverse=True)
 )
+
+# 值可能非常长：实测「纳入标准」2242 字、「排除标准」1410 字、
+# 「研究实施地点」6964 字。早期实现用 (.{0,900}?) 截断，导致这些字段
+# 被静默丢弃（正则匹配不到 → 字段整个消失）。这里放宽到 60K，
+# 足够覆盖任何真实字段，同时仍能防止正则回溯失控。
+_MAX_FIELD_LEN = 60000
+
+
+def _td_cells(html: str) -> list[str]:
+    """按表格结构切出所有 <td> 的纯文本（保留单元格边界）。
+
+    详情页是标准表格：每个字段的标签在 <td class="left_title"> 里（含
+    <p class="cn">中文：</p><p class="en">English：</p>），值在**紧随其后的
+    那个 <td>** 里。按 <td> 切开再配对，比把整页压成一串文本后用正则去猜
+    边界可靠得多——后者会让英文标签混进值里，也会让值越过相邻字段。
+    """
+    cells: list[str] = []
+    for td in re.findall(r"<td[^>]*>(.*?)</td>", html, re.S | re.I):
+        # 单元格内若还有嵌套表格（研究实施地点、结局指标等复合块），
+        # 先整体压平，但保留内部换行以免相邻子项粘连。
+        txt = re.sub(r"</(p|div|tr|li)>", "\n", td, flags=re.I)
+        txt = re.sub(r"<br\s*/?>", "\n", txt, flags=re.I)
+        txt = _TAG_RE.sub(" ", txt)
+        txt = txt.replace("&nbsp;", " ")
+        cells.append(_clean_multiline(txt))
+    return cells
+
+
+def _clean_multiline(s: str) -> str:
+    """压空白但保留换行（用于在单元格内部区分层级）。
+
+    必须在这里解码 HTML 实体：页面用 `&#32;` / `&#39;` 等十进制实体书写
+    部分单元格文本（实测「具体地址」「指标中文名」），若不解码，抽出的值
+    会带着字面 `&#32;` 入库，与 HTML 原文（真实空格）对不上。
+    """
+    s = html_mod.unescape(s)
+    s = s.replace("\u00a0", " ").replace("\r", "\n")
+    s = re.sub(r"[ \t\u3000]+", " ", s)
+    s = re.sub(r"\n\s*\n+", "\n", s)
+    return s.strip()
+
+
+def _strip_label(text: str) -> str:
+    """剥掉单元格开头的「中文标签：」或「English label：」前缀。"""
+    t = text.strip()
+    # 去掉所有前导的「XXX：」短标签（中文或英文），最多 2 层
+    for _ in range(2):
+        m = re.match(r"^([^：:\n]{1,40}?)\s*[：:]\s*(.*)$", t, re.S)
+        if not m:
+            break
+        head = m.group(1).strip()
+        # 只剥看起来像标签的（不长、不含句末标点）
+        if len(head) <= 30 and not re.search(r"[。！？；]$", head):
+            t = m.group(2).strip()
+        else:
+            break
+    return t.strip(" ：:;；")
 
 
 def parse_detail(html: str) -> dict[str, Any]:
     """把详情页的「字段：值」对提取为 dict。
 
-    详情页每一行的真实形态是「中文标签：英文标签：值」，例如：
+    实现分两步：
+      1. 表格结构解析（主路径）：按 <td> 切分，标签单元格与值单元格相邻配对。
+         这是页面真实结构，能干净拿到「值」，不会把英文标签吞进值里。
+      2. 纯文本正则回退：极少数字段不落在标准 <td> 结构里（例如位于嵌套
+         表格或跨行单元格），用压平文本 + 前瞻断言兜底补齐。
 
-        注册时间： Date of Registration： 2026-09-20 00:00:00
-        注册题目： <标题> Public title： <title>
-
-    因此不能在中文标签后立刻把英文标签当边界，否则会截断成空值。
-    做法：先跳过紧跟的中文/英文标签对，再从真实值开始，遇到下一个标签结束。
+    纯文本回退里必须先把正文起点定位到「注册号：」之后：页面顶部导航栏也含
+    同名文字（实测「经费或物资来源统计」在偏移 141、「征募研究对象情况统计」
+    在 152，早于正文真实字段），否则会命中导航栏取到串味的值。
     """
     plain = _clean(
         _TAG_RE.sub(" ", re.sub(r"<script.*?</script>", " ", html, flags=re.S | re.I))
     )
 
-    # 值开头允许出现 1~2 个「英文标签：」前缀，逐一剥掉。
-    en_lead = r"(?:(?:" + _EN_BOUNDARY_RE + r")\s*[：:]\s*)*"
-
     fields: dict[str, str] = {}
+
+    # ---------- 路径 1：表格结构解析 ----------
+    cells = _td_cells(html)
+    label_set = set(DETAIL_LABELS)
+    for i, cell in enumerate(cells):
+        # 标签单元格的判据：开头是「已知中文标签：」。
+        m = re.match(r"^([\u4e00-\u9fa5][^：:\n]{0,40}?)\s*[：:]", cell)
+        if not m:
+            continue
+        label = m.group(1).strip()
+        if label not in label_set or label in SECTION_ONLY_LABELS:
+            continue
+        if i + 1 >= len(cells):
+            continue
+        # 值单元格：剥离可能的前导英文标签（<p class="en">…</p> 被压平后成了
+        # 单元格开头的一部分），再取内容。
+        val = _clean_multiline(cells[i + 1])
+        # 值单元格可能整条就是英文标签 + 值，剥掉英文前缀
+        val = re.sub(r"^(?:[A-Za-z][A-Za-z0-9'()/\-\.\s,:]{0,60}?)\s*[：:]\s*", "", val, count=2)
+        val = val.strip(" ：:;；")
+        # 空值单元格（实测「研究课题代号(代码)：」「注册题目简写：」原页面留空）
+        # 必须显式判空后放弃：若继续走纯文本回退，会匹配到扁平文本里紧随的
+        # 下一个标签名，抽出 'Study subject ID' 这类伪造值。
+        if not val:
+            fields[label] = ""
+            continue
+        fields.setdefault(label, val)
+
+    # ---------- 路径 2：纯文本回退（补结构解析漏掉的字段）----------
+    body_start = 0
+    m_body = re.search(r"注册号\s*[：:]\s*(?:" + _EN_BOUNDARY_RE + r"\s*[：:]\s*)?", plain)
+    if m_body:
+        body_start = m_body.start()
+
+    body = plain[body_start:]
+    tail_cut = re.search(r"(版权声明|Copyright|网站地图|友情链接)\s*[：:]?", body)
+    if tail_cut:
+        body = body[: tail_cut.start()]
+
+    en_lead = r"(?:(?:" + _EN_BOUNDARY_RE + r")\s*[：:]\s*)*"
     for label in DETAIL_LABELS:
+        # 结构解析已给出结论（含"确认为空"）的字段不再回退，
+        # 否则空值会被扁平文本里的下一个标签名伪造出一段假值。
+        # 区块标题（SECTION_ONLY_LABELS）本身不是字段，回退也会抽到
+        # 下一行的英文标签名（实测 'Outcomes'、'Collecting sample(s)…'）。
+        if label in fields or label in SECTION_ONLY_LABELS:
+            continue
         m = re.search(
-            re.escape(label) + r"\s*[：:]\s*" + en_lead +
-            r"(.{0,900}?)(?=(?:" + _BOUNDARY_RE + r")\s*[：:]|$)",
-            plain,
+            re.escape(label) + _LABEL_TAIL_NOISE + r"[：:]\s*" + en_lead +
+            r"(.{0,%d}?)(?=(?:" % _MAX_FIELD_LEN + _BOUNDARY_RE + r")\s*[：:]|$)",
+            body,
         )
         if m:
             val = m.group(1).strip(" ：:;；")
@@ -313,14 +478,19 @@ def parse_detail(html: str) -> dict[str, Any]:
                 fields[label] = val
 
     regno = None
-    m = re.search(r"ChiCTR\d{6,}", plain)
+    m = REGNO_RE.search(plain)
     if m:
         regno = m.group(0)
+
+    # 空值字段不进入输出：结构解析用它阻止回退伪造假值，但对外它只是
+    # 「页面该字段留空」，与「字段不存在」在本次抓取里没有区别。
+    fields = {k: v for k, v in fields.items() if v}
 
     return {
         "registration_number": regno,
         "fields": fields,
         "field_count": len(fields),
+        "raw_text": plain,
         "raw_text_length": len(plain),
     }
 
@@ -425,6 +595,10 @@ def make_handler(solver: ChallengeSolver, client: ChictrClient):
             if _is_challenge(body):
                 return self._send({"error": "challenge_unsolved", "status": status}, 503)
             data = parse_detail(body)
+            # 原始 HTML 默认不返回（约 250KB，会给 MCP 通道和调用方带来
+            # 不必要的负担）。需要留档时加 &raw=1 显式索取。
+            if one("raw") in ("1", "true", "yes"):
+                data["raw_html"] = body
             data.update({"ok": True, "source": "chictr_direct", "project_id": proj, "url": url})
             return self._send(data)
 
